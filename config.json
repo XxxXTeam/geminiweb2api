@@ -1,0 +1,12 @@
+{
+  "api_key": "",
+  "token": "",
+  "proxy": "",
+  "port": 8080,
+  "log_level": "info",
+  "log_file": "",
+  "note": [
+    ""
+  ]
+}
+
