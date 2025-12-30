@@ -1,0 +1,9 @@
+# Binary artifacts
+main
+main.zip
+
+# Local config
+config.json
+
+# Temporary/test files
+test.txt
