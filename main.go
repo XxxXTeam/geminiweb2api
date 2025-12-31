@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	rand2 "math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,17 +19,40 @@ import (
 )
 
 const (
-	GeminiURL = "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+	GeminiURL      = "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+	GeminiHomeURL  = "https://gemini.google.com/"
+	DefaultBLToken = "b4c8a140d16df3a02e732943458fa040"
 )
+
+var modelIDMap = map[string]string{
+	"gemini-3-flash":   "1640bdc9f7ef4826",
+	"gemini-2.5-flash": "e6fa609c3fa255c0",
+	"gemini-2.5-pro":   "9d8ca3786ebdfbea",
+	"gemini-2-flash":   "203e6bb81620bcfe",
+	"gemini-flash":     "1640bdc9f7ef4826",
+	"gemini-pro":       "9d8ca3786ebdfbea",
+}
 
 type Config struct {
 	APIKey   string   `json:"api_key"`
 	Token    string   `json:"token"`
+	Cookies  string   `json:"cookies"`
 	Proxy    string   `json:"proxy"`
 	Port     int      `json:"port"`
 	LogFile  string   `json:"log_file"`
 	LogLevel string   `json:"log_level"`
 	Note     []string `json:"note"`
+}
+
+type TokenInfo struct {
+	SNlM0e    string // at token
+	BLToken   string
+	FetchedAt time.Time
+	mutex     sync.RWMutex
+}
+
+var tokenInfo = &TokenInfo{
+	BLToken: DefaultBLToken,
 }
 
 var config Config
@@ -180,14 +206,47 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 type ChatCompletionRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-	Stream   bool      `json:"stream"`
+	Model       string    `json:"model"`
+	Messages    []Message `json:"messages"`
+	Stream      bool      `json:"stream"`
+	Tools       []Tool    `json:"tools,omitempty"`
+	ToolChoice  any       `json:"tool_choice,omitempty"`
+	Temperature float64   `json:"temperature,omitempty"`
+	MaxTokens   int       `json:"max_tokens,omitempty"`
+}
+
+type Tool struct {
+	Type     string   `json:"type"`
+	Function Function `json:"function"`
+}
+
+type Function struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description,omitempty"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 }
 
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role       string      `json:"role"`
+	Content    interface{} `json:"content"`
+	ToolCalls  []ToolCall  `json:"tool_calls,omitempty"`
+	ToolCallID string      `json:"tool_call_id,omitempty"`
+}
+
+type ContentPart struct {
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
+}
+
+type ToolCall struct {
+	ID       string       `json:"id"`
+	Type     string       `json:"type"`
+	Function FunctionCall `json:"function"`
+}
+
+type FunctionCall struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 type ChatCompletionResponse struct {
 	ID      string   `json:"id"`
@@ -206,8 +265,9 @@ type Choice struct {
 }
 
 type Delta struct {
-	Role    string `json:"role,omitempty"`
-	Content string `json:"content,omitempty"`
+	Role      string     `json:"role,omitempty"`
+	Content   string     `json:"content,omitempty"`
+	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
 }
 
 type Usage struct {
@@ -327,6 +387,99 @@ func initHTTPClient() {
 	}
 	logger.Info("HTTP client initialized")
 }
+func fetchToken() error {
+	if config.Cookies == "" {
+		logger.Warn("No cookies configured, using config token only")
+		return nil
+	}
+
+	req, err := http.NewRequest("GET", GeminiHomeURL, nil)
+	if err != nil {
+		return fmt.Errorf("create request failed: %v", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
+	req.Header.Set("Cookie", config.Cookies)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	randomIP := generateRandomIP()
+	req.Header.Set("X-Forwarded-For", randomIP)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read body failed: %v", err)
+	}
+	patterns := []string{
+		`"SNlM0e":"([^"]+)"`,
+		`SNlM0e\\x22:\\x22([^\\]+)\\x22`,
+		`WIZ_global_data[^}]*"SNlM0e":"([^"]+)"`,
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		matches := re.FindSubmatch(body)
+		if len(matches) > 1 {
+			tokenInfo.mutex.Lock()
+			tokenInfo.SNlM0e = string(matches[1])
+			tokenInfo.FetchedAt = time.Now()
+			tokenInfo.mutex.Unlock()
+			logger.Info("Token fetched successfully (length=%d)", len(tokenInfo.SNlM0e))
+			return nil
+		}
+	}
+	if config.Token != "" {
+		tokenInfo.mutex.Lock()
+		tokenInfo.SNlM0e = config.Token
+		tokenInfo.FetchedAt = time.Now()
+		tokenInfo.mutex.Unlock()
+		logger.Info("Using configured token")
+		return nil
+	}
+
+	return fmt.Errorf("SNlM0e token not found in page")
+}
+func getToken() string {
+	tokenInfo.mutex.RLock()
+	defer tokenInfo.mutex.RUnlock()
+	if tokenInfo.SNlM0e != "" {
+		return tokenInfo.SNlM0e
+	}
+	return config.Token
+}
+func refreshTokenIfNeeded() {
+	tokenInfo.mutex.RLock()
+	needRefresh := tokenInfo.SNlM0e == "" || time.Since(tokenInfo.FetchedAt) > 30*time.Minute
+	tokenInfo.mutex.RUnlock()
+
+	if needRefresh && config.Cookies != "" {
+		if err := fetchToken(); err != nil {
+			logger.Warn("Failed to refresh token: %v", err)
+		}
+	}
+}
+
+func startTokenRefresher() {
+	if config.Cookies != "" {
+		if err := fetchToken(); err != nil {
+			logger.Warn("Initial token fetch failed: %v", err)
+		}
+	}
+	go func() {
+		ticker := time.NewTicker(25 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			refreshTokenIfNeeded()
+		}
+	}()
+}
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -365,6 +518,10 @@ func handleTelemetry(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
+func init() {
+	rand2.Seed(time.Now().UnixNano())
+}
+
 func main() {
 	if err := loadConfig(); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
@@ -372,6 +529,7 @@ func main() {
 	logger = newLogger(config.LogLevel, os.Stdout)
 
 	initHTTPClient()
+	startTokenRefresher()
 	startConfigWatcher()
 
 	mux := http.NewServeMux()
@@ -382,15 +540,14 @@ func main() {
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
+		now := time.Now().Unix()
 		models := ModelsResponse{
 			Object: "list",
 			Data: []Model{
-				{
-					ID:      "gemini-3-flash",
-					Object:  "model",
-					Created: time.Now().Unix(),
-					OwnedBy: "google",
-				},
+				{ID: "gemini-3-flash", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-2.5-flash", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-2.5-pro", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-2-flash", Object: "model", Created: now, OwnedBy: "google"},
 			},
 		}
 		writeJSON(w, http.StatusOK, models)
@@ -445,35 +602,201 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	} else {
 		logger.Debug("Using existing session: %s (c=%s)", sessionKey, session.ConversationID)
 	}
-
-	var prompt strings.Builder
-	for _, msg := range req.Messages {
-		switch msg.Role {
-		case "system":
-			prompt.WriteString(fmt.Sprintf("System: %s\n", msg.Content))
-		case "user":
-			prompt.WriteString(fmt.Sprintf("User: %s\n", msg.Content))
-		case "assistant":
-			prompt.WriteString(fmt.Sprintf("Assistant: %s\n", msg.Content))
-		}
-	}
+	prompt := buildPrompt(req)
 
 	if req.Stream {
 		logger.Debug("Starting stream response")
-		handleStreamResponse(w, prompt.String(), req.Model, session)
+		handleStreamResponse(w, prompt, req.Model, session, req.Tools)
 	} else {
 		logger.Debug("Starting non-stream response")
-		handleNonStreamResponse(w, prompt.String(), req.Model, session)
+		handleNonStreamResponse(w, prompt, req.Model, session, req.Tools)
 	}
 }
+func extractMessageContent(msg Message) string {
+	switch v := msg.Content.(type) {
+	case string:
+		return v
+	case []interface{}:
+		var parts []string
+		for _, part := range v {
+			if p, ok := part.(map[string]interface{}); ok {
+				if text, ok := p["text"].(string); ok {
+					parts = append(parts, text)
+				}
+			}
+		}
+		return strings.Join(parts, "\n")
+	default:
+		if v != nil {
+			return fmt.Sprintf("%v", v)
+		}
+		return ""
+	}
+}
+func buildToolsPrompt(tools []Tool) string {
+	if len(tools) == 0 {
+		return ""
+	}
 
-func buildGeminiRequest(prompt string, session *GeminiSession) (*http.Request, error) {
-	uuid := fmt.Sprintf("%08X-%04X-%04X-%04X-%012X",
-		time.Now().UnixNano()&0xFFFFFFFF,
-		time.Now().UnixNano()&0xFFFF,
-		0x4000|time.Now().UnixNano()&0x0FFF,
-		0x8000|time.Now().UnixNano()&0x3FFF,
-		time.Now().UnixNano()&0xFFFFFFFFFFFF)
+	var sb strings.Builder
+	sb.WriteString("\n[TOOLS]\nYou have access to the following tools. To use a tool, respond with ONLY a JSON object in this exact format (no markdown, no code blocks):\n")
+	sb.WriteString("{\"name\": \"tool_name\", \"arguments\": {\"param\": \"value\"}}\n\n")
+	sb.WriteString("Available tools:\n")
+
+	for _, tool := range tools {
+		if tool.Type != "function" {
+			continue
+		}
+		sb.WriteString(fmt.Sprintf("- %s", tool.Function.Name))
+		if tool.Function.Description != "" {
+			sb.WriteString(fmt.Sprintf(": %s", tool.Function.Description))
+		}
+		if tool.Function.Parameters != nil {
+			if props, ok := tool.Function.Parameters["properties"].(map[string]interface{}); ok {
+				var params []string
+				for k := range props {
+					params = append(params, k)
+				}
+				sb.WriteString(fmt.Sprintf(" (params: %s)", strings.Join(params, ", ")))
+			}
+		}
+		sb.WriteString("\n")
+	}
+	sb.WriteString("[/TOOLS]\n")
+
+	return sb.String()
+}
+
+func buildPrompt(req ChatCompletionRequest) string {
+	var prompt strings.Builder
+	toolsPrompt := buildToolsPrompt(req.Tools)
+	if toolsPrompt != "" {
+		prompt.WriteString(toolsPrompt)
+		prompt.WriteString("\n---\n\n")
+	}
+	for _, msg := range req.Messages {
+		content := extractMessageContent(msg)
+		switch msg.Role {
+		case "system":
+			prompt.WriteString(fmt.Sprintf("[System Instruction]\n%s\n[/System Instruction]\n\n", content))
+		case "user":
+			prompt.WriteString(fmt.Sprintf("User: %s\n\n", content))
+		case "assistant":
+			if len(msg.ToolCalls) > 0 {
+				for _, tc := range msg.ToolCalls {
+					prompt.WriteString(fmt.Sprintf("Assistant (tool_call): %s(%s)\n\n", tc.Function.Name, tc.Function.Arguments))
+				}
+			} else {
+				prompt.WriteString(fmt.Sprintf("Assistant: %s\n\n", content))
+			}
+		case "tool":
+			prompt.WriteString(fmt.Sprintf("Tool Result [%s]: %s\n\n", msg.ToolCallID, content))
+		}
+	}
+
+	return prompt.String()
+}
+
+func generateUUIDv4() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40 // version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // variant
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+func generateRandomIP() string {
+	ips := []string{
+		fmt.Sprintf("%d.%d.%d.%d", 1+rand2.Intn(126), rand2.Intn(256), rand2.Intn(256), 1+rand2.Intn(254)),
+		fmt.Sprintf("%d.%d.%d.%d", 128+rand2.Intn(63), rand2.Intn(256), rand2.Intn(256), 1+rand2.Intn(254)),
+		fmt.Sprintf("%d.%d.%d.%d", 192+rand2.Intn(31), rand2.Intn(256), rand2.Intn(256), 1+rand2.Intn(254)),
+	}
+	return ips[rand2.Intn(len(ips))]
+}
+
+func generateRandomHex(length int) string {
+	b := make([]byte, length/2)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+func parseToolCalls(content string, tools []Tool) (string, []ToolCall) {
+	if len(tools) == 0 {
+		return content, nil
+	}
+
+	var toolCalls []ToolCall
+	cleanContent := content
+	re1 := regexp.MustCompile(`(?s)\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]*\})\s*\}`)
+	matches1 := re1.FindAllStringSubmatch(content, -1)
+	for i, match := range matches1 {
+		name := match[1]
+		args := match[2]
+		for _, t := range tools {
+			if t.Function.Name == name {
+				toolCalls = append(toolCalls, ToolCall{
+					ID:   fmt.Sprintf("call_%s_%d", generateRandomHex(8), i),
+					Type: "function",
+					Function: FunctionCall{
+						Name:      name,
+						Arguments: args,
+					},
+				})
+				cleanContent = strings.Replace(cleanContent, match[0], "", 1)
+				break
+			}
+		}
+	}
+
+	if len(toolCalls) > 0 {
+		return strings.TrimSpace(cleanContent), toolCalls
+	}
+	re2 := regexp.MustCompile("(?s)```tool_call\\s*\\n?(\\{.*?\\})\\s*```")
+	matches2 := re2.FindAllStringSubmatch(content, -1)
+	for i, match := range matches2 {
+		var tc struct {
+			Name      string          `json:"name"`
+			Arguments json.RawMessage `json:"arguments"`
+		}
+
+		jsonStr := match[1]
+		if err := json.Unmarshal([]byte(jsonStr), &tc); err != nil {
+			logger.Debug("Failed to parse tool call: %v", err)
+			continue
+		}
+		toolExists := false
+		for _, t := range tools {
+			if t.Function.Name == tc.Name {
+				toolExists = true
+				break
+			}
+		}
+		if !toolExists {
+			continue
+		}
+
+		toolCall := ToolCall{
+			ID:   fmt.Sprintf("call_%s_%d", generateRandomHex(8), i),
+			Type: "function",
+			Function: FunctionCall{
+				Name:      tc.Name,
+				Arguments: string(tc.Arguments),
+			},
+		}
+		toolCalls = append(toolCalls, toolCall)
+		cleanContent = strings.Replace(cleanContent, match[0], "", 1)
+	}
+
+	return strings.TrimSpace(cleanContent), toolCalls
+}
+
+func buildGeminiRequest(prompt string, session *GeminiSession, modelName string) (*http.Request, error) {
+	uuid := generateUUIDv4()
+	modelID := modelIDMap["gemini-3-flash"]
+	if id, ok := modelIDMap[modelName]; ok {
+		modelID = id
+		logger.Debug("Using model: %s -> %s", modelName, modelID)
+	}
 
 	var contextArray []interface{}
 	if session != nil && session.ConversationID != "" {
@@ -483,13 +806,17 @@ func buildGeminiRequest(prompt string, session *GeminiSession) (*http.Request, e
 		contextArray = []interface{}{nil, nil, nil, nil, nil, nil, nil, nil, nil, ""}
 		logger.Debug("Starting new conversation")
 	}
+	currentToken := getToken()
+	if currentToken == "" {
+		logger.Warn("No token available, request may fail")
+	}
 
 	innerArray := []interface{}{
 		[]interface{}{prompt, 0, nil, nil, nil, nil, 0},
 		[]interface{}{"zh-CN"},
 		contextArray,
-		config.Token,
-		"b4c8a140d16df3a02e732943458fa040",
+		currentToken,
+		modelID,
 		nil,
 		[]interface{}{0},
 		1, nil, nil, 9, 0, nil, nil, nil, nil, nil,
@@ -506,10 +833,8 @@ func buildGeminiRequest(prompt string, session *GeminiSession) (*http.Request, e
 
 	innerJSON, _ := json.Marshal(innerArray)
 	freqData := fmt.Sprintf(`[null,%q]`, string(innerJSON))
-
 	data := url.Values{}
 	data.Set("f.req", freqData)
-
 	req, err := http.NewRequest("POST", GeminiURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
@@ -517,6 +842,9 @@ func buildGeminiRequest(prompt string, session *GeminiSession) (*http.Request, e
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
 	req.Header.Set("accept-language", "zh-CN")
+	if config.Cookies != "" {
+		req.Header.Set("Cookie", config.Cookies)
+	}
 	req.Header.Set("cache-control", "no-cache")
 	req.Header.Set("origin", "https://gemini.google.com")
 	req.Header.Set("pragma", "no-cache")
@@ -536,7 +864,10 @@ func buildGeminiRequest(prompt string, session *GeminiSession) (*http.Request, e
 	req.Header.Set("sec-fetch-dest", "empty")
 	req.Header.Set("sec-fetch-mode", "cors")
 	req.Header.Set("sec-fetch-site", "same-origin")
-
+	randomIP := generateRandomIP()
+	req.Header.Set("X-Forwarded-For", randomIP)
+	req.Header.Set("X-Real-IP", randomIP)
+	logger.Debug("Using random XFF IP: %s", randomIP)
 	return req, nil
 }
 
@@ -549,9 +880,9 @@ func escapeJSON(s string) string {
 	return s
 }
 
-func handleStreamResponse(w http.ResponseWriter, prompt string, model string, session *GeminiSession) {
+func handleStreamResponse(w http.ResponseWriter, prompt string, model string, session *GeminiSession, tools []Tool) {
 	start := time.Now()
-	req, err := buildGeminiRequest(prompt, session)
+	req, err := buildGeminiRequest(prompt, session, model)
 	if err != nil {
 		logger.Error("Failed to build Gemini request: %v", err)
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -598,7 +929,12 @@ func handleStreamResponse(w http.ResponseWriter, prompt string, model string, se
 	content := extractFinalContent(bodyStr)
 	if content != "" {
 		logger.Debug("Extracted stream content (len=%d): %.100s", len(content), content)
-		sendStreamChunk(w, flusher, model, content, "", false)
+		cleanContent, toolCalls := parseToolCalls(content, tools)
+		if len(toolCalls) > 0 {
+			sendStreamChunkWithTools(w, flusher, model, cleanContent, toolCalls)
+		} else {
+			sendStreamChunk(w, flusher, model, content, "", false)
+		}
 	}
 
 	updateSessionFromResponse(session, bodyStr)
@@ -606,8 +942,12 @@ func handleStreamResponse(w http.ResponseWriter, prompt string, model string, se
 	inputTokens := len(prompt) / 4
 	outputTokens := len(content) / 4
 	metrics.AddRequest(true, inputTokens, outputTokens)
-
-	sendStreamChunk(w, flusher, model, "", "", true)
+	_, toolCalls := parseToolCalls(content, tools)
+	if len(toolCalls) > 0 {
+		sendStreamChunkFinish(w, flusher, model, "tool_calls")
+	} else {
+		sendStreamChunk(w, flusher, model, "", "", true)
+	}
 	w.Write([]byte("data: [DONE]\n\n"))
 	flusher.Flush()
 	logger.Info("Stream response completed in %.3fms", float64(time.Since(start).Microseconds())/1000)
@@ -643,9 +983,49 @@ func sendStreamChunk(w http.ResponseWriter, flusher http.Flusher, model string, 
 	flusher.Flush()
 }
 
-func handleNonStreamResponse(w http.ResponseWriter, prompt string, model string, session *GeminiSession) {
+func sendStreamChunkWithTools(w http.ResponseWriter, flusher http.Flusher, model string, content string, toolCalls []ToolCall) {
+	chunk := ChatCompletionResponse{
+		ID:      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
+		Object:  "chat.completion.chunk",
+		Created: time.Now().Unix(),
+		Model:   model,
+		Choices: []Choice{
+			{
+				Index: 0,
+				Delta: &Delta{
+					Content:   content,
+					ToolCalls: toolCalls,
+				},
+			},
+		},
+	}
+	jsonData, _ := json.Marshal(chunk)
+	w.Write([]byte(fmt.Sprintf("data: %s\n\n", jsonData)))
+	flusher.Flush()
+}
+
+func sendStreamChunkFinish(w http.ResponseWriter, flusher http.Flusher, model string, finishReason string) {
+	chunk := ChatCompletionResponse{
+		ID:      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
+		Object:  "chat.completion.chunk",
+		Created: time.Now().Unix(),
+		Model:   model,
+		Choices: []Choice{
+			{
+				Index:        0,
+				Delta:        &Delta{},
+				FinishReason: &finishReason,
+			},
+		},
+	}
+	jsonData, _ := json.Marshal(chunk)
+	w.Write([]byte(fmt.Sprintf("data: %s\n\n", jsonData)))
+	flusher.Flush()
+}
+
+func handleNonStreamResponse(w http.ResponseWriter, prompt string, model string, session *GeminiSession, tools []Tool) {
 	start := time.Now()
-	req, err := buildGeminiRequest(prompt, session)
+	req, err := buildGeminiRequest(prompt, session, model)
 	if err != nil {
 		logger.Error("Failed to build Gemini request: %v", err)
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -680,17 +1060,19 @@ func handleNonStreamResponse(w http.ResponseWriter, prompt string, model string,
 	if content == "" {
 		logger.Warn("Empty content extracted from response, body preview: %.500s", bodyStr)
 	}
-
 	updateSessionFromResponse(session, bodyStr)
-
+	cleanContent, toolCalls := parseToolCalls(content, tools)
 	inputTokens := len(prompt) / 4
 	outputTokens := len(content) / 4
 	metrics.AddRequest(true, inputTokens, outputTokens)
 
 	logger.Info("Non-stream response completed in %.3fms, content length: %d",
 		float64(time.Since(start).Microseconds())/1000, len(content))
-
 	finishReason := "stop"
+	if len(toolCalls) > 0 {
+		finishReason = "tool_calls"
+	}
+
 	response := ChatCompletionResponse{
 		ID:      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
 		Object:  "chat.completion",
@@ -700,8 +1082,9 @@ func handleNonStreamResponse(w http.ResponseWriter, prompt string, model string,
 			{
 				Index: 0,
 				Message: &Message{
-					Role:    "assistant",
-					Content: content,
+					Role:      "assistant",
+					Content:   cleanContent,
+					ToolCalls: toolCalls,
 				},
 				FinishReason: &finishReason,
 			},
@@ -746,21 +1129,80 @@ func updateSessionFromResponse(session *GeminiSession, body string) {
 }
 
 func extractFinalContent(body string) string {
-	re := regexp.MustCompile(`\\"rc_[^\\]+\\",\[\\"([^"]*)\\"`)
-	matches := re.FindAllStringSubmatch(body, -1)
-
-	if len(matches) > 0 {
-		longest := ""
-		for _, m := range matches {
-			if len(m) > 1 && len(m[1]) > len(longest) {
-				longest = m[1]
-			}
+	var contents []string
+	idx := 0
+	for {
+		start := strings.Index(body[idx:], `"rc_`)
+		if start == -1 {
+			break
 		}
-		if longest != "" {
-			return unescapeContent(longest)
+		start += idx
+		arrStart := strings.Index(body[start:], `",["`)
+		if arrStart == -1 {
+			idx = start + 4
+			continue
+		}
+		arrStart += start + 4
+		content, endPos := extractQuotedString(body[arrStart:])
+		if content != "" {
+			contents = append(contents, content)
+		}
+		idx = arrStart + endPos + 1
+	}
+	idx = 0
+	for {
+		start := strings.Index(body[idx:], `\"rc_`)
+		if start == -1 {
+			break
+		}
+		start += idx
+
+		arrStart := strings.Index(body[start:], `\",[\"`)
+		if arrStart == -1 {
+			idx = start + 4
+			continue
+		}
+		arrStart += start + 5
+		endPos := strings.Index(body[arrStart:], `\"]`)
+		if endPos == -1 {
+			idx = arrStart
+			continue
+		}
+		content := body[arrStart : arrStart+endPos]
+		if content != "" {
+			contents = append(contents, content)
+		}
+		idx = arrStart + endPos + 2
+	}
+	longest := ""
+	for _, c := range contents {
+		if len(c) > len(longest) {
+			longest = c
 		}
 	}
-	return ""
+	return unescapeContent(longest)
+}
+
+func extractQuotedString(s string) (string, int) {
+	if len(s) == 0 {
+		return "", 0
+	}
+
+	var result strings.Builder
+	i := 0
+	for i < len(s) {
+		if s[i] == '"' {
+			return result.String(), i
+		} else if s[i] == '\\' && i+1 < len(s) {
+			result.WriteByte(s[i])
+			result.WriteByte(s[i+1])
+			i += 2
+		} else {
+			result.WriteByte(s[i])
+			i++
+		}
+	}
+	return result.String(), i
 }
 
 func unescapeContent(s string) string {
