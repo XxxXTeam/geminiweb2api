@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	GeminiURL      = "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+	GeminiURL      = "https://gemini.arpt.io/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
 	GeminiHomeURL  = "https://gemini.google.com/"
 	DefaultBLToken = "b4c8a140d16df3a02e732943458fa040"
 )
@@ -60,6 +60,7 @@ type TokenManager struct {
 	sessionTokens map[string]*AnonToken
 	mutex         sync.RWMutex
 }
+
 type AnonToken struct {
 	SNlM0e    string
 	FetchedAt time.Time
@@ -71,7 +72,6 @@ var tokenManager = &TokenManager{
 }
 
 func (tm *TokenManager) Init() {
-	logger.Info("TokenManager initialized (anonymous mode)")
 }
 
 func (tm *TokenManager) FetchAnonymousToken() (string, error) {
@@ -119,10 +119,10 @@ func (tm *TokenManager) FetchAnonymousToken() (string, error) {
 
 	return "", fmt.Errorf("SNlM0e not found in anonymous page")
 }
-
 func (tm *TokenManager) GetTokenForSession(sessionKey string, isNewSession bool) (string, int) {
 	tm.mutex.Lock()
-	defer tm.mutex.Unlock(
+	defer tm.mutex.Unlock()
+
 	if token, exists := tm.sessionTokens[sessionKey]; exists && !isNewSession && !token.IsBad {
 		if time.Since(token.FetchedAt) < 25*time.Minute {
 			return token.SNlM0e, 0
@@ -130,7 +130,6 @@ func (tm *TokenManager) GetTokenForSession(sessionKey string, isNewSession bool)
 	}
 	snlm0e, err := tm.FetchAnonymousToken()
 	if err != nil {
-		logger.Warn("Failed to fetch anonymous token: %v", err)
 		if token, exists := tm.sessionTokens[sessionKey]; exists {
 			return token.SNlM0e, 0
 		}
@@ -147,7 +146,6 @@ func (tm *TokenManager) GetTokenForSession(sessionKey string, isNewSession bool)
 }
 
 func (tm *TokenManager) MarkTokenBad(idx int) (string, int) {
-	logger.Warn("Token marked as bad, will fetch new anonymous token on next request")
 	return "", 0
 }
 
@@ -1061,6 +1059,17 @@ func handleStreamResponse(w http.ResponseWriter, prompt string, model string, se
 	content := extractFinalContent(bodyStr)
 	content = filterContent(content)
 
+	if content == "" && isEmptyAcknowledgmentResponse(bodyStr) {
+		logger.Error("Received empty acknowledgment response in stream - token may be invalid or expired")
+		tokenManager.MarkSessionTokenBad(sessionKey)
+		sendStreamChunk(w, flusher, model, "Error: Gemini returned empty response - token issue, please retry.", "", false)
+		sendStreamChunk(w, flusher, model, "", "", true)
+		w.Write([]byte("data: [DONE]\n\n"))
+		flusher.Flush()
+		metrics.AddRequest(false, len(prompt)/4, 0)
+		return
+	}
+
 	if content != "" {
 		logger.Debug("Extracted stream content (len=%d): %.100s", len(content), content)
 		cleanContent, toolCalls := parseToolCalls(content, tools)
@@ -1210,6 +1219,13 @@ func handleNonStreamResponse(w http.ResponseWriter, prompt string, model string,
 
 	if content == "" {
 		logger.Warn("Empty content extracted from response, body preview: %.500s", bodyStr)
+		if isEmptyAcknowledgmentResponse(bodyStr) {
+			logger.Error("Received empty acknowledgment response - token may be invalid or expired")
+			tokenManager.MarkSessionTokenBad(sessionKey)
+			metrics.AddRequest(false, len(prompt)/4, 0)
+			writeError(w, http.StatusBadGateway, "Gemini returned empty response - token issue, please retry")
+			return
+		}
 	}
 	updateSessionFromResponse(session, bodyStr)
 	cleanContent, toolCalls := parseToolCalls(content, tools)
@@ -1373,6 +1389,7 @@ func unescapeContent(s string) string {
 }
 
 func filterContent(content string) string {
+
 	patterns := []string{
 		`温馨提示：如要解锁所有应用的完整功能，请开启 \[Gemini 应用活动记录\]\([^)]+\)\s*。?\s*`,
 		`温馨提示：如要解锁所有应用的完整功能，请开启 Gemini 应用活动记录[^。]*。?\s*`,
@@ -1386,6 +1403,16 @@ func filterContent(content string) string {
 	}
 
 	return strings.TrimSpace(result)
+}
+
+func isEmptyAcknowledgmentResponse(body string) bool {
+	hasResponseID := strings.Contains(body, `"r_`) || strings.Contains(body, `\"r_`)
+	hasChoiceContent := strings.Contains(body, `"rc_`) || strings.Contains(body, `\"rc_`)
+	hasNullConversation := strings.Contains(body, `[null,"r_`) || strings.Contains(body, `[null,\"r_`)
+	if hasResponseID && !hasChoiceContent && hasNullConversation {
+		return true
+	}
+	return false
 }
 
 func isHTMLErrorResponse(body string) bool {
