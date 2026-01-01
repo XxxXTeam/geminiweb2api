@@ -19,18 +19,37 @@ import (
 )
 
 const (
-	GeminiURL      = "https://gemini.arpt.io/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
-	GeminiHomeURL  = "https://gemini.google.com/"
-	DefaultBLToken = "b4c8a140d16df3a02e732943458fa040"
+	GeminiURL = "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+	/*
+	* If an error occurs immediately when launching this project, you can try reverse proxying gemini.google.com and replacing the host of the gemini URL.
+	 */
+
+	GeminiHomeURL = "https://gemini.google.com/"
 )
 
+var errorCodeMap = map[int]string{
+	0: "success",
+	1: "invalid_request",
+	2: "rate_limit_exceeded",
+	3: "content_filtered",
+	4: "authentication_error",
+	5: "server_error",
+	6: "timeout",
+	7: "model_overloaded",
+	8: "context_length_exceeded",
+}
+
 var modelIDMap = map[string]string{
-	"gemini-3-flash":   "1640bdc9f7ef4826",
-	"gemini-2.5-flash": "e6fa609c3fa255c0",
-	"gemini-2.5-pro":   "9d8ca3786ebdfbea",
-	"gemini-2-flash":   "203e6bb81620bcfe",
-	"gemini-flash":     "1640bdc9f7ef4826",
-	"gemini-pro":       "9d8ca3786ebdfbea",
+	"gemini-3-flash":           "1640bdc9f7ef4826",
+	"gemini-3":                 "1640bdc9f7ef4826",
+	"gemini-2.5-flash":         "e6fa609c3fa255c0",
+	"gemini-2.5-pro":           "9d8ca3786ebdfbea",
+	"gemini-2-flash":           "203e6bb81620bcfe",
+	"gemini-2.0-flash":         "203e6bb81620bcfe",
+	"gemini-flash":             "1640bdc9f7ef4826",
+	"gemini-pro":               "9d8ca3786ebdfbea",
+	"gemini-3-pro":             "9d8ca3786ebdfbea",
+	"gemini-2.5-flash-preview": "e6fa609c3fa255c0",
 }
 
 type Config struct {
@@ -52,9 +71,7 @@ type TokenInfo struct {
 	mutex     sync.RWMutex
 }
 
-var tokenInfo = &TokenInfo{
-	BLToken: DefaultBLToken,
-}
+var tokenInfo = &TokenInfo{}
 
 type TokenManager struct {
 	sessionTokens map[string]*AnonToken
@@ -105,6 +122,8 @@ func (tm *TokenManager) FetchAnonymousToken() (string, error) {
 		`"SNlM0e":"([^"]+)"`,
 		`SNlM0e\\x22:\\x22([^\\]+)\\x22`,
 		`WIZ_global_data[^}]*"SNlM0e":"([^"]+)"`,
+		`SNlM0e\\":\\"([^\\]+)\\"`,
+		`"SNlM0e"\s*:\s*"([^"]+)"`,
 	}
 
 	for _, pattern := range patterns {
@@ -112,8 +131,10 @@ func (tm *TokenManager) FetchAnonymousToken() (string, error) {
 		matches := re.FindSubmatch(body)
 		if len(matches) > 1 {
 			snlm0e := string(matches[1])
-			logger.Debug("Fetched anonymous SNlM0e (length=%d)", len(snlm0e))
-			return snlm0e, nil
+			if len(snlm0e) > 10 {
+				logger.Debug("Fetched anonymous SNlM0e (length=%d)", len(snlm0e))
+				return snlm0e, nil
+			}
 		}
 	}
 
@@ -311,13 +332,14 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 type ChatCompletionRequest struct {
-	Model       string    `json:"model"`
-	Messages    []Message `json:"messages"`
-	Stream      bool      `json:"stream"`
-	Tools       []Tool    `json:"tools,omitempty"`
-	ToolChoice  any       `json:"tool_choice,omitempty"`
-	Temperature float64   `json:"temperature,omitempty"`
-	MaxTokens   int       `json:"max_tokens,omitempty"`
+	Model          string    `json:"model"`
+	Messages       []Message `json:"messages"`
+	Stream         bool      `json:"stream"`
+	Tools          []Tool    `json:"tools,omitempty"`
+	ToolChoice     any       `json:"tool_choice,omitempty"`
+	Temperature    float64   `json:"temperature,omitempty"`
+	MaxTokens      int       `json:"max_tokens,omitempty"`
+	ConversationID string    `json:"conversation_id,omitempty"`
 }
 
 type Tool struct {
@@ -354,12 +376,13 @@ type FunctionCall struct {
 	Arguments string `json:"arguments"`
 }
 type ChatCompletionResponse struct {
-	ID      string   `json:"id"`
-	Object  string   `json:"object"`
-	Created int64    `json:"created"`
-	Model   string   `json:"model"`
-	Choices []Choice `json:"choices"`
-	Usage   Usage    `json:"usage"`
+	ID             string   `json:"id"`
+	Object         string   `json:"object"`
+	Created        int64    `json:"created"`
+	Model          string   `json:"model"`
+	Choices        []Choice `json:"choices"`
+	Usage          Usage    `json:"usage"`
+	ConversationID string   `json:"conversation_id,omitempty"`
 }
 
 type Choice struct {
@@ -494,7 +517,6 @@ func initHTTPClient() {
 }
 func fetchToken() error {
 	if config.Cookies == "" {
-		logger.Warn("No cookies configured, using config token only")
 		return nil
 	}
 
@@ -522,24 +544,56 @@ func fetchToken() error {
 	if err != nil {
 		return fmt.Errorf("read body failed: %v", err)
 	}
-	patterns := []string{
+	snlm0ePatterns := []string{
 		`"SNlM0e":"([^"]+)"`,
 		`SNlM0e\\x22:\\x22([^\\]+)\\x22`,
 		`WIZ_global_data[^}]*"SNlM0e":"([^"]+)"`,
+		`SNlM0e\\":\\"([^\\]+)\\"`,
+		`"SNlM0e"\s*:\s*"([^"]+)"`,
 	}
 
-	for _, pattern := range patterns {
+	blPatterns := []string{
+		`"cfb2h":"([^"]+)"`,
+		`cfb2h\\x22:\\x22([^\\]+)\\x22`,
+		`"cfb2h"\s*:\s*"([^"]+)"`,
+		`cfb2h\\":\\"([^\\]+)\\"`,
+	}
+
+	var snlm0e, blToken string
+
+	for _, pattern := range snlm0ePatterns {
 		re := regexp.MustCompile(pattern)
 		matches := re.FindSubmatch(body)
 		if len(matches) > 1 {
-			tokenInfo.mutex.Lock()
-			tokenInfo.SNlM0e = string(matches[1])
-			tokenInfo.FetchedAt = time.Now()
-			tokenInfo.mutex.Unlock()
-			logger.Info("Token fetched successfully (length=%d)", len(tokenInfo.SNlM0e))
-			return nil
+			token := string(matches[1])
+			if len(token) > 10 {
+				snlm0e = token
+				break
+			}
 		}
 	}
+
+	for _, pattern := range blPatterns {
+		re := regexp.MustCompile(pattern)
+		matches := re.FindSubmatch(body)
+		if len(matches) > 1 {
+			blToken = string(matches[1])
+			break
+		}
+	}
+
+	if snlm0e != "" {
+		tokenInfo.mutex.Lock()
+		tokenInfo.SNlM0e = snlm0e
+		if blToken != "" {
+			tokenInfo.BLToken = blToken
+		}
+		tokenInfo.FetchedAt = time.Now()
+		tokenInfo.mutex.Unlock()
+		logger.Info("Token fetched: SNlM0e(len=%d), BL=%s", len(snlm0e), blToken)
+		return nil
+	}
+
 	if config.Token != "" {
 		tokenInfo.mutex.Lock()
 		tokenInfo.SNlM0e = config.Token
@@ -651,9 +705,14 @@ func main() {
 			Object: "list",
 			Data: []Model{
 				{ID: "gemini-3-flash", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-3", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-3-pro", Object: "model", Created: now, OwnedBy: "google"},
 				{ID: "gemini-2.5-flash", Object: "model", Created: now, OwnedBy: "google"},
 				{ID: "gemini-2.5-pro", Object: "model", Created: now, OwnedBy: "google"},
 				{ID: "gemini-2-flash", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-2.0-flash", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-flash", Object: "model", Created: now, OwnedBy: "google"},
+				{ID: "gemini-pro", Object: "model", Created: now, OwnedBy: "google"},
 			},
 		}
 		writeJSON(w, http.StatusOK, models)
@@ -700,9 +759,21 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		sessionKey = fmt.Sprintf("default-%s", r.RemoteAddr)
 	}
 
+	if req.ConversationID != "" {
+		sessionKey = req.ConversationID
+	}
+
 	session, exists := sessions[sessionKey]
 	isNewSession := !exists
-	if !exists {
+
+	if req.ConversationID != "" && exists {
+		logger.Debug("Resuming conversation: %s", req.ConversationID)
+	} else if req.ConversationID != "" && !exists {
+		session = &GeminiSession{ConversationID: req.ConversationID}
+		sessions[sessionKey] = session
+		logger.Debug("Created session from conversation_id: %s", req.ConversationID)
+		isNewSession = false
+	} else if !exists {
 		session = &GeminiSession{}
 		sessions[sessionKey] = session
 		logger.Debug("Created new session: %s", sessionKey)
@@ -920,7 +991,6 @@ func buildGeminiRequest(prompt string, session *GeminiSession, modelName string,
 		currentToken = getToken()
 	}
 	if currentToken == "" {
-		logger.Warn("No token available, request may fail")
 	}
 
 	innerArray := []interface{}{
@@ -994,33 +1064,84 @@ func escapeJSON(s string) string {
 
 func handleStreamResponse(w http.ResponseWriter, prompt string, model string, session *GeminiSession, tools []Tool, sessionKey string, snlm0eToken string) {
 	start := time.Now()
+	const maxRetries = 3
 
-	req, err := buildGeminiRequest(prompt, session, model, snlm0eToken)
-	if err != nil {
-		logger.Error("Failed to build Gemini request: %v", err)
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	var bodyStr string
+	var content string
+	var lastErr string
 
-	logger.Debug("Sending request to Gemini API...")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		logger.Error("Gemini API request failed: %v", err)
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	defer resp.Body.Close()
-	logger.Debug("Gemini API response status: %d", resp.StatusCode)
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		bodyStr := string(body)
-		logger.Error("Gemini API returned status %d: %s", resp.StatusCode, bodyStr)
-		if isHTMLErrorResponse(bodyStr) {
-			logger.Warn("HTML error detected, marking session token as bad")
-			tokenManager.MarkSessionTokenBad(sessionKey)
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			logger.Info("Retry attempt %d/%d for stream request", attempt, maxRetries)
+			snlm0eToken, _ = tokenManager.GetTokenForSession(sessionKey, true)
+			time.Sleep(time.Duration(attempt*500) * time.Millisecond)
 		}
 
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Gemini API error: %d", resp.StatusCode))
+		req, err := buildGeminiRequest(prompt, session, model, snlm0eToken)
+		if err != nil {
+			logger.Error("Failed to build Gemini request: %v", err)
+			lastErr = err.Error()
+			continue
+		}
+
+		logger.Debug("Sending request to Gemini API...")
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			logger.Error("Gemini API request failed: %v", err)
+			lastErr = err.Error()
+			continue
+		}
+
+		logger.Debug("Gemini API response status: %d", resp.StatusCode)
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			bodyStr = string(body)
+			logger.Error("Gemini API returned status %d: %s", resp.StatusCode, bodyStr)
+			if isHTMLErrorResponse(bodyStr) {
+				logger.Warn("HTML error detected, marking session token as bad")
+				tokenManager.MarkSessionTokenBad(sessionKey)
+			}
+			lastErr = fmt.Sprintf("Gemini API error: %d", resp.StatusCode)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logger.Error("Failed to read stream response: %v", err)
+			lastErr = err.Error()
+			continue
+		}
+
+		logger.Debug("Stream response body size: %d bytes", len(body))
+		bodyStr = string(body)
+
+		if isHTMLErrorResponse(bodyStr) {
+			logger.Warn("HTML error detected in response body, marking session token as bad")
+			tokenManager.MarkSessionTokenBad(sessionKey)
+			lastErr = "Request failed due to token issue"
+			continue
+		}
+
+		content = extractFinalContent(bodyStr)
+		content = filterContent(content)
+
+		if content == "" && isEmptyAcknowledgmentResponse(bodyStr) {
+			logger.Error("Received empty acknowledgment response in stream - token may be invalid or expired")
+			tokenManager.MarkSessionTokenBad(sessionKey)
+			lastErr = "Gemini returned empty response - token issue"
+			continue
+		}
+
+		lastErr = ""
+		break
+	}
+
+	if lastErr != "" {
+		logger.Error("All %d retry attempts failed, last error: %s", maxRetries, lastErr)
+		metrics.AddRequest(false, len(prompt)/4, 0)
+		writeError(w, http.StatusBadGateway, lastErr)
 		return
 	}
 
@@ -1033,42 +1154,10 @@ func handleStreamResponse(w http.ResponseWriter, prompt string, model string, se
 		writeError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
-	sendStreamChunk(w, flusher, model, "", "assistant", false)
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Failed to read stream response: %v", err)
-		sendStreamChunk(w, flusher, model, "", "", true)
-		w.Write([]byte("data: [DONE]\n\n"))
-		flusher.Flush()
-		return
-	}
 
-	logger.Debug("Stream response body size: %d bytes", len(body))
-	bodyStr := string(body)
-	if isHTMLErrorResponse(bodyStr) {
-		logger.Warn("HTML error detected in response body, marking session token as bad")
-		tokenManager.MarkSessionTokenBad(sessionKey)
-		sendStreamChunk(w, flusher, model, "Request failed due to token issue, please retry.", "", false)
-		sendStreamChunk(w, flusher, model, "", "", true)
-		w.Write([]byte("data: [DONE]\n\n"))
-		flusher.Flush()
-		metrics.AddRequest(false, len(prompt)/4, 0)
-		return
-	}
+	updateSessionFromResponse(session, bodyStr)
 
-	content := extractFinalContent(bodyStr)
-	content = filterContent(content)
-
-	if content == "" && isEmptyAcknowledgmentResponse(bodyStr) {
-		logger.Error("Received empty acknowledgment response in stream - token may be invalid or expired")
-		tokenManager.MarkSessionTokenBad(sessionKey)
-		sendStreamChunk(w, flusher, model, "Error: Gemini returned empty response - token issue, please retry.", "", false)
-		sendStreamChunk(w, flusher, model, "", "", true)
-		w.Write([]byte("data: [DONE]\n\n"))
-		flusher.Flush()
-		metrics.AddRequest(false, len(prompt)/4, 0)
-		return
-	}
+	sendStreamChunkWithConversation(w, flusher, model, "", "assistant", false, session.ConversationID)
 
 	if content != "" {
 		logger.Debug("Extracted stream content (len=%d): %.100s", len(content), content)
@@ -1080,8 +1169,6 @@ func handleStreamResponse(w http.ResponseWriter, prompt string, model string, se
 			sendStreamChunk(w, flusher, model, content, "", false)
 		}
 	}
-
-	updateSessionFromResponse(session, bodyStr)
 
 	inputTokens := len(prompt) / 4
 	outputTokens := len(content) / 4
@@ -1103,6 +1190,37 @@ func sendStreamChunk(w http.ResponseWriter, flusher http.Flusher, model string, 
 		Object:  "chat.completion.chunk",
 		Created: time.Now().Unix(),
 		Model:   model,
+		Choices: []Choice{
+			{
+				Index: 0,
+				Delta: &Delta{},
+			},
+		},
+	}
+
+	if role != "" {
+		chunk.Choices[0].Delta.Role = role
+	}
+	if content != "" {
+		chunk.Choices[0].Delta.Content = content
+	}
+	if isFinish {
+		finishReason := "stop"
+		chunk.Choices[0].FinishReason = &finishReason
+	}
+
+	jsonData, _ := json.Marshal(chunk)
+	w.Write([]byte(fmt.Sprintf("data: %s\n\n", jsonData)))
+	flusher.Flush()
+}
+
+func sendStreamChunkWithConversation(w http.ResponseWriter, flusher http.Flusher, model string, content string, role string, isFinish bool, conversationID string) {
+	chunk := ChatCompletionResponse{
+		ID:             fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
+		Object:         "chat.completion.chunk",
+		Created:        time.Now().Unix(),
+		Model:          model,
+		ConversationID: conversationID,
 		Choices: []Choice{
 			{
 				Index: 0,
@@ -1169,63 +1287,84 @@ func sendStreamChunkFinish(w http.ResponseWriter, flusher http.Flusher, model st
 
 func handleNonStreamResponse(w http.ResponseWriter, prompt string, model string, session *GeminiSession, tools []Tool, sessionKey string, snlm0eToken string) {
 	start := time.Now()
+	const maxRetries = 3
 
-	req, err := buildGeminiRequest(prompt, session, model, snlm0eToken)
-	if err != nil {
-		logger.Error("Failed to build Gemini request: %v", err)
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	var bodyStr string
+	var content string
+	var lastErr string
 
-	logger.Debug("Sending request to Gemini API...")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		logger.Error("Gemini API request failed: %v", err)
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	defer resp.Body.Close()
-	logger.Debug("Gemini API response status: %d", resp.StatusCode)
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			logger.Info("Retry attempt %d/%d for non-stream request", attempt, maxRetries)
+			snlm0eToken, _ = tokenManager.GetTokenForSession(sessionKey, true)
+			time.Sleep(time.Duration(attempt*500) * time.Millisecond)
+		}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Failed to read response body: %v", err)
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	logger.Debug("Response body size: %d bytes", len(body))
-	bodyStr := string(body)
+		req, err := buildGeminiRequest(prompt, session, model, snlm0eToken)
+		if err != nil {
+			logger.Error("Failed to build Gemini request: %v", err)
+			lastErr = err.Error()
+			continue
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		logger.Error("Gemini API returned status %d: %s", resp.StatusCode, bodyStr)
+		logger.Debug("Sending request to Gemini API...")
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			logger.Error("Gemini API request failed: %v", err)
+			lastErr = err.Error()
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logger.Error("Failed to read response body: %v", err)
+			lastErr = err.Error()
+			continue
+		}
+		logger.Debug("Gemini API response status: %d", resp.StatusCode)
+		logger.Debug("Response body size: %d bytes", len(body))
+		bodyStr = string(body)
+
+		if resp.StatusCode != http.StatusOK {
+			logger.Error("Gemini API returned status %d: %s", resp.StatusCode, bodyStr)
+			if isHTMLErrorResponse(bodyStr) {
+				logger.Warn("HTML error detected, marking session token as bad")
+				tokenManager.MarkSessionTokenBad(sessionKey)
+			}
+			lastErr = fmt.Sprintf("Gemini API error: %d", resp.StatusCode)
+			continue
+		}
+
 		if isHTMLErrorResponse(bodyStr) {
-			logger.Warn("HTML error detected, marking session token as bad")
+			logger.Warn("HTML error detected in response body, marking session token as bad")
 			tokenManager.MarkSessionTokenBad(sessionKey)
+			lastErr = "Request failed due to token issue"
+			continue
 		}
 
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Gemini API error: %d", resp.StatusCode))
-		return
+		content = extractFinalContent(bodyStr)
+		content = filterContent(content)
+
+		if content == "" {
+			logger.Warn("Empty content extracted from response, body preview: %.500s", bodyStr)
+			if isEmptyAcknowledgmentResponse(bodyStr) {
+				logger.Error("Received empty acknowledgment response - token may be invalid or expired")
+				tokenManager.MarkSessionTokenBad(sessionKey)
+				lastErr = "Gemini returned empty response - token issue"
+				continue
+			}
+		}
+
+		lastErr = ""
+		break
 	}
-	if isHTMLErrorResponse(bodyStr) {
-		logger.Warn("HTML error detected in response body, marking session token as bad")
-		tokenManager.MarkSessionTokenBad(sessionKey)
+
+	if lastErr != "" {
+		logger.Error("All %d retry attempts failed, last error: %s", maxRetries, lastErr)
 		metrics.AddRequest(false, len(prompt)/4, 0)
-		writeError(w, http.StatusBadGateway, "Request failed due to token issue, please retry")
+		writeError(w, http.StatusBadGateway, lastErr)
 		return
-	}
-
-	content := extractFinalContent(bodyStr)
-	content = filterContent(content)
-
-	if content == "" {
-		logger.Warn("Empty content extracted from response, body preview: %.500s", bodyStr)
-		if isEmptyAcknowledgmentResponse(bodyStr) {
-			logger.Error("Received empty acknowledgment response - token may be invalid or expired")
-			tokenManager.MarkSessionTokenBad(sessionKey)
-			metrics.AddRequest(false, len(prompt)/4, 0)
-			writeError(w, http.StatusBadGateway, "Gemini returned empty response - token issue, please retry")
-			return
-		}
 	}
 	updateSessionFromResponse(session, bodyStr)
 	cleanContent, toolCalls := parseToolCalls(content, tools)
@@ -1243,10 +1382,11 @@ func handleNonStreamResponse(w http.ResponseWriter, prompt string, model string,
 	}
 
 	response := ChatCompletionResponse{
-		ID:      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
-		Object:  "chat.completion",
-		Created: time.Now().Unix(),
-		Model:   model,
+		ID:             fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
+		Object:         "chat.completion",
+		Created:        time.Now().Unix(),
+		Model:          model,
+		ConversationID: session.ConversationID,
 		Choices: []Choice{
 			{
 				Index: 0,
@@ -1299,50 +1439,62 @@ func updateSessionFromResponse(session *GeminiSession, body string) {
 
 func extractFinalContent(body string) string {
 	var contents []string
-	idx := 0
-	for {
-		start := strings.Index(body[idx:], `"rc_`)
-		if start == -1 {
-			break
-		}
-		start += idx
-		arrStart := strings.Index(body[start:], `",["`)
-		if arrStart == -1 {
-			idx = start + 4
-			continue
-		}
-		arrStart += start + 4
-		content, endPos := extractQuotedString(body[arrStart:])
-		if content != "" {
-			contents = append(contents, content)
-		}
-		idx = arrStart + endPos + 1
-	}
-	idx = 0
-	for {
-		start := strings.Index(body[idx:], `\"rc_`)
-		if start == -1 {
-			break
-		}
-		start += idx
 
-		arrStart := strings.Index(body[start:], `\",[\"`)
-		if arrStart == -1 {
-			idx = start + 4
-			continue
-		}
-		arrStart += start + 5
-		endPos := strings.Index(body[arrStart:], `\"]`)
-		if endPos == -1 {
-			idx = arrStart
-			continue
-		}
-		content := body[arrStart : arrStart+endPos]
-		if content != "" {
-			contents = append(contents, content)
-		}
-		idx = arrStart + endPos + 2
+	patterns := []struct {
+		startPattern string
+		arrPattern   string
+		escaped      bool
+	}{
+		{`"rc_`, `",["`, false},
+		{`\"rc_`, `\",[\"`, true},
 	}
+
+	for _, p := range patterns {
+		idx := 0
+		for {
+			start := strings.Index(body[idx:], p.startPattern)
+			if start == -1 {
+				break
+			}
+			start += idx
+
+			arrStart := strings.Index(body[start:], p.arrPattern)
+			if arrStart == -1 {
+				idx = start + len(p.startPattern)
+				continue
+			}
+
+			if p.escaped {
+				arrStart += start + len(p.arrPattern)
+				endPos := strings.Index(body[arrStart:], `\"]`)
+				if endPos == -1 {
+					idx = arrStart
+					continue
+				}
+				content := body[arrStart : arrStart+endPos]
+				if content != "" {
+					contents = append(contents, content)
+				}
+				idx = arrStart + endPos + 2
+			} else {
+				arrStart += start + len(p.arrPattern)
+				content, endPos := extractQuotedString(body[arrStart:])
+				if content != "" {
+					contents = append(contents, content)
+				}
+				idx = arrStart + endPos + 1
+			}
+		}
+	}
+
+	jsonArrayRe := regexp.MustCompile(`\[\s*"rc_[a-f0-9]+"\s*,\s*\[\s*"([^"]*(?:\\.[^"]*)*)"\s*\]`)
+	matches := jsonArrayRe.FindAllStringSubmatch(body, -1)
+	for _, match := range matches {
+		if len(match) > 1 && match[1] != "" {
+			contents = append(contents, match[1])
+		}
+	}
+
 	longest := ""
 	for _, c := range contents {
 		if len(c) > len(longest) {
@@ -1377,15 +1529,35 @@ func extractQuotedString(s string) (string, int) {
 func unescapeContent(s string) string {
 	s = strings.ReplaceAll(s, "\\\\n", "\n")
 	s = strings.ReplaceAll(s, "\\\\t", "\t")
+	s = strings.ReplaceAll(s, "\\\\r", "\r")
 	s = strings.ReplaceAll(s, "\\\\\"", "\"")
 	s = strings.ReplaceAll(s, "\\\\'", "'")
 	s = strings.ReplaceAll(s, "\\\\\\\\", "\\")
 	s = strings.ReplaceAll(s, "\\n", "\n")
 	s = strings.ReplaceAll(s, "\\t", "\t")
+	s = strings.ReplaceAll(s, "\\r", "\r")
 	s = strings.ReplaceAll(s, "\\\"", "\"")
 	s = strings.ReplaceAll(s, "\\'", "'")
+	s = strings.ReplaceAll(s, "\\u003c", "<")
+	s = strings.ReplaceAll(s, "\\u003e", ">")
+	s = strings.ReplaceAll(s, "\\u0026", "&")
+	s = strings.ReplaceAll(s, "\\u0027", "'")
+	s = strings.ReplaceAll(s, "\\u003d", "=")
 	s = strings.ReplaceAll(s, "\\\\", "\\")
 	return s
+}
+
+func parseGeminiErrorCode(body string) (int, string) {
+	errorRe := regexp.MustCompile(`"errorCode"\s*:\s*(\d+)`)
+	if matches := errorRe.FindStringSubmatch(body); len(matches) > 1 {
+		code := 0
+		fmt.Sscanf(matches[1], "%d", &code)
+		if msg, ok := errorCodeMap[code]; ok {
+			return code, msg
+		}
+		return code, "unknown_error"
+	}
+	return 0, ""
 }
 
 func filterContent(content string) string {
@@ -1428,13 +1600,36 @@ func isHTMLErrorResponse(body string) bool {
 		"服务条款",
 		"display:none",
 		"style.display='block'",
+		"<!DOCTYPE html>",
+		"<head>",
+		"captcha",
+		"recaptcha",
+		"blocked",
+		"Access denied",
+		"rate limit",
 	}
 
 	for _, indicator := range htmlIndicators {
-		if strings.Contains(body, indicator) {
+		if strings.Contains(strings.ToLower(body), strings.ToLower(indicator)) {
 			return true
 		}
 	}
 
 	return false
+}
+
+func checkGeminiError(body string) (bool, string) {
+	code, msg := parseGeminiErrorCode(body)
+	if code != 0 {
+		return true, fmt.Sprintf("Gemini error code %d: %s", code, msg)
+	}
+
+	if strings.Contains(body, `"error"`) {
+		errorMsgRe := regexp.MustCompile(`"error"\s*:\s*\{\s*"message"\s*:\s*"([^"]+)"`)
+		if matches := errorMsgRe.FindStringSubmatch(body); len(matches) > 1 {
+			return true, matches[1]
+		}
+	}
+
+	return false, ""
 }
