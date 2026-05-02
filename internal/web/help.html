@@ -5,152 +5,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gemini Web 2 API 使用手册</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap");
       *,*::before,*::after{box-sizing:border-box}html{scroll-behavior:smooth}
-      :root{color-scheme:light;--bg:#f4f7fb;--bg2:#fff;--panel:rgba(255,255,255,.86);--panel2:rgba(255,255,255,.96);--text:#172033;--soft:#55637f;--faint:#7d8aa0;--line:rgba(23,32,51,.1);--line2:rgba(23,32,51,.16);--accent:#0f766e;--accent2:#2563eb;--warn:#b45309;--danger:#b91c1c;--shadow:0 22px 60px rgba(15,23,42,.12);--r1:28px;--r2:20px;--r3:14px;--sans:"Noto Sans SC","Microsoft YaHei",sans-serif;--display:"Space Grotesk",var(--sans);--mono:"JetBrains Mono",Consolas,monospace}
-      [data-theme="dark"]{color-scheme:dark;--bg:#09111f;--bg2:#0f172a;--panel:rgba(10,18,33,.78);--panel2:rgba(12,21,38,.92);--text:#edf3ff;--soft:rgba(237,243,255,.74);--faint:rgba(237,243,255,.48);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);--accent:#2dd4bf;--accent2:#60a5fa;--warn:#fbbf24;--danger:#f87171;--shadow:0 28px 80px rgba(0,0,0,.34)}
-      body{margin:0;min-height:100vh;font-family:var(--sans);color:var(--text);background:radial-gradient(circle at top left,rgba(37,99,235,.12),transparent 34%),radial-gradient(circle at right 12%,rgba(15,118,110,.12),transparent 28%),linear-gradient(180deg,var(--bg),var(--bg2));overflow-x:hidden}
-      body[data-ready="false"]{visibility:hidden}
-      body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(127,140,164,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(127,140,164,.08) 1px,transparent 1px);background-size:28px 28px;mask-image:linear-gradient(180deg,rgba(0,0,0,.58),transparent 78%)}
-      a{color:inherit}button,a{-webkit-tap-highlight-color:transparent}:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
-      .top{position:sticky;top:0;z-index:40;backdrop-filter:blur(18px);background:color-mix(in srgb,var(--panel2) 85%,transparent);border-bottom:1px solid var(--line)}
-      .top-in,.page,.footer{width:min(1320px,calc(100% - 32px));margin:0 auto}
-      .top-in{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-      .brand{display:flex;align-items:center;gap:14px}.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 18px 36px rgba(37,99,235,.22);position:relative}.logo::after{content:"";position:absolute;inset:9px;border-radius:11px;border:1px solid rgba(255,255,255,.32)}
-      .brand strong{display:block;font:700 1rem/1 var(--display)}.brand span{display:block;margin-top:4px;color:var(--soft);font-size:.9rem}
-      .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-      .btn{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:color-mix(in srgb,var(--panel) 88%,transparent);color:var(--text);text-decoration:none;font:600 .95rem/1 var(--sans);display:inline-flex;align-items:center;gap:10px;cursor:pointer;transition:transform .16s,border-color .16s}
-      .btn:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 45%,var(--line2))}
-      .page{position:relative;z-index:1;padding:26px 0 52px}
-      .hero{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(320px,.82fr);gap:18px;margin-bottom:18px}
-      .panel{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);box-shadow:var(--shadow)}
-      .hero-main,.hero-side,.nav,.card,.footer{border-radius:var(--r1)}
-      .hero-main,.hero-side{overflow:hidden}.hero-main{padding:28px;background-image:linear-gradient(135deg,rgba(15,118,110,.16),rgba(37,99,235,.1));position:relative}.hero-main::after{content:"";position:absolute;right:-40px;top:-30px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.28),transparent 68%)}
-      .eyebrow,.pill{display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);color:var(--soft);font-size:.88rem;white-space:nowrap}
-      .eyebrow{gap:8px;background:rgba(255,255,255,.18)}.eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2))}
-      h1{margin:18px 0 10px;font:800 clamp(2rem,4vw,3.5rem)/1.04 var(--display);letter-spacing:-.04em;max-width:11ch}
-      .hero-main p{margin:0;max-width:60ch;font-size:1rem;line-height:1.82;color:var(--soft)}
-      .hero-bullets,.grid2,.grid4,.faq-grid{display:grid;gap:14px}.hero-bullets{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:22px}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .hero-bullet,.side-box,.mini,.step,.call,.code,.faq{border-radius:20px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel2) 96%,transparent)}
-      .hero-bullet,.side-box,.mini,.step,.call,.faq{padding:18px}
-      .hero-bullet strong,.side-box h2,.mini strong,.step strong,.call strong,.faq strong,.sec-head h2{display:block;color:var(--text)}.hero-bullet span,.side-box p,.side-box li,.mini span,.step span,.call span,.faq span,.sec-body{color:var(--soft);line-height:1.8;font-size:.97rem}
-      .hero-side{padding:24px;display:grid;gap:14px}.mini-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
-      .layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;align-items:start}
-      .nav{position:sticky;top:92px;padding:18px}.nav h2{margin:0 0 12px;font:700 .9rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-      .nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 12px;border-radius:14px;text-decoration:none;color:var(--soft);border:1px solid transparent;transition:background .16s,color .16s,border-color .16s}
-      .nav a:hover,.nav a.active{color:var(--text);background:color-mix(in srgb,var(--accent) 10%,var(--panel2));border-color:color-mix(in srgb,var(--accent) 28%,var(--line))}
-      .num{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;font:600 .82rem/1 var(--mono);color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);flex-shrink:0}
-      .sections{display:grid;gap:16px}.card{overflow:hidden}
-      .sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px 24px 16px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel2) 94%,transparent)}.sec-head p{margin:6px 0 0;color:var(--faint);font-size:.92rem}
-      .sec-body{padding:22px 24px 24px}
-      .step{position:relative;padding-left:72px}.step-no{position:absolute;left:18px;top:18px;width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font:700 .98rem/1 var(--mono)}
-      code,.k{font-family:var(--mono);font-size:.92em;padding:.16rem .42rem;border-radius:10px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--text)}
-      .good{border-color:color-mix(in srgb,var(--accent) 30%,var(--line))}.warn{border-color:color-mix(in srgb,var(--warn) 32%,var(--line))}.danger{border-color:color-mix(in srgb,var(--danger) 28%,var(--line))}
-      .tabs{display:inline-flex;gap:8px;padding:6px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel2) 95%,transparent)}
-      .tab{min-height:38px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:var(--soft);font:600 .9rem/1 var(--sans);cursor:pointer}.tab.active{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--text)}
+      :root{color-scheme:light;--bg:#fff;--panel:#fff;--text:#111827;--soft:#6b7280;--faint:#9ca3af;--line:#e5e7eb;--line2:#d1d5db;--chip:#f9fafb;--warn:#b45309;--danger:#b91c1c;--shadow:0 12px 30px rgba(17,24,39,.05);--r1:22px;--r2:16px;--sans:"Inter","Noto Sans SC","Microsoft YaHei",sans-serif;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+      body{margin:0;min-height:100vh;background:#fff;color:var(--text);font-family:var(--sans)}
+      a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}code{font-family:var(--mono);background:#f3f4f6;padding:.12rem .38rem;border-radius:8px}
+      :focus-visible{outline:2px solid #111827;outline-offset:2px}
+      .shell{width:min(1240px,calc(100% - 32px));margin:0 auto}
+      .top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+      .top-in{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:14px}.mark{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);display:grid;place-items:center;font-weight:800}.brand strong{display:block}.brand span{display:block;margin-top:4px;font-size:.92rem;color:var(--soft)}
+      .btn{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center}.btn:hover{background:#fafafa;border-color:var(--line2)}
+      .page{padding:28px 0 40px}
+      .hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:18px;margin-bottom:18px}
+      .card{background:#fff;border:1px solid var(--line);border-radius:var(--r1);box-shadow:var(--shadow)}
+      .hero-main,.hero-side,.section{padding:24px}
+      .eyebrow{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--chip);color:var(--soft);font-size:.86rem}
+      h1{margin:16px 0 10px;font-size:clamp(2rem,4vw,3rem);line-height:1.04;letter-spacing:-.04em;max-width:11ch}.hero-main p{margin:0;max-width:60ch;line-height:1.8;color:var(--soft)}
+      .hero-grid,.grid2,.grid3,.faq-grid{display:grid;gap:12px}.hero-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:22px}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .mini,.step,.call,.faq,.side-box{padding:18px;border:1px solid var(--line);border-radius:16px;background:#fff}.mini strong,.step strong,.call strong,.faq strong,.side-box strong,.section-head h2{display:block}.mini span,.step span,.call span,.faq span,.side-box span,.section-head p{display:block;margin-top:8px;color:var(--soft);line-height:1.75}
+      .layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px}.nav{position:sticky;top:92px;padding:18px}.nav h2{margin:0 0 10px;font-size:.86rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}.nav a{display:flex;align-items:center;gap:10px;min-height:42px;padding:10px 12px;border-radius:12px;border:1px solid transparent;color:var(--soft)}.nav a:hover,.nav a.active{background:#fafafa;color:var(--text);border-color:var(--line)}.num{width:28px;height:28px;border-radius:10px;background:#f3f4f6;display:grid;place-items:center;font-size:.82rem;font-family:var(--mono)}
+      .sections{display:grid;gap:16px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px 24px 16px;border-bottom:1px solid var(--line);background:#fafafa}.section-body{padding:22px 24px 24px}
+      .step{position:relative;padding-left:68px}.step-no{position:absolute;left:18px;top:18px;width:38px;height:38px;border-radius:12px;background:#f3f4f6;display:grid;place-items:center;font:700 .92rem/1 var(--mono)}
+      .pill{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:#f3f4f6;color:var(--soft);font-size:.84rem}
+      .tabs{display:inline-flex;gap:8px;padding:6px;border-radius:999px;border:1px solid var(--line);background:#fff}.tab{min-height:36px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--soft)}.tab.active{background:#111827;color:#fff}
       .tab-panel{display:none}.tab-panel.active{display:block}
-      .code{margin-top:14px;overflow:hidden;background:#07111f;color:rgba(234,242,255,.9)}[data-theme="light"] .code{background:#122032}
-      .code-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08)}.code-top span{font:600 .78rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:rgba(234,242,255,.62)}
-      .copy{min-height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:rgba(255,255,255,.88);cursor:pointer;font:600 .84rem/1 var(--sans)}
-      pre{margin:0;padding:16px 18px;overflow:auto;font:400 .9rem/1.72 var(--mono)}
-      .footer{margin-top:18px;padding:18px 22px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--soft);font-size:.95rem}
-      .footer a{text-decoration:none;color:var(--accent)}
-      .reveal{opacity:0;transform:translateY(18px);transition:opacity .42s,transform .42s}.reveal.visible{opacity:1;transform:translateY(0)}
-      @media(max-width:1100px){.hero,.layout{grid-template-columns:1fr}.nav{position:static;order:2}}
-      @media(max-width:760px){.top-in{padding:10px 0;align-items:flex-start;flex-direction:column}.hero-main,.hero-side,.sec-head,.sec-body{padding-left:18px;padding-right:18px}.hero-bullets,.grid2,.grid4,.faq-grid{grid-template-columns:1fr}.top-in,.page,.footer{width:min(1320px,calc(100% - 20px))}h1{max-width:none}}
+      .code{margin-top:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#111827;color:#f9fafb}.code-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08)}.code-top span{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.68)}.copy{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff}.copy:hover{background:rgba(255,255,255,.1)}pre{margin:0;padding:16px 18px;overflow:auto;font:400 .9rem/1.72 var(--mono)}
+      .footer{padding:18px 0 30px;color:var(--faint);font-size:.9rem}
+      @media(max-width:1080px){.hero,.layout{grid-template-columns:1fr}.nav{position:static}.hero-grid,.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+      @media(max-width:720px){.shell{width:min(1240px,calc(100% - 20px))}.top-in{padding:10px 0;align-items:flex-start;flex-direction:column}.hero-main,.hero-side,.section,.section-head,.section-body{padding-left:18px;padding-right:18px}}
     </style>
   </head>
-  <body data-theme="light" data-ready="false">
+  <body>
     <header class="top">
-      <div class="top-in">
+      <div class="shell top-in">
         <div class="brand">
-          <div class="logo" aria-hidden="true"></div>
+          <div class="mark" aria-hidden="true">GW</div>
           <div>
             <strong>Gemini Web 2 API</strong>
-            <span>用户手册 · 面向二进制分发版本</span>
+            <span>简约手册页 · 面向部署和接入</span>
           </div>
         </div>
-        <div class="actions">
-          <button class="btn" id="langEn" type="button" aria-label="Switch to English">EN</button>
-          <button class="btn" id="langZh" type="button" aria-label="切换到中文">中文</button>
-          <button class="btn" id="themeToggle" type="button" aria-label="切换主题">切换到暗色</button>
-          <a class="btn" href="/">返回监控大屏</a>
+        <div>
+          <a class="btn" href="/">返回控制台</a>
         </div>
       </div>
     </header>
 
-    <div class="page">
+    <div class="shell page">
       <section class="hero">
-        <div class="hero-main panel reveal">
-          <span class="eyebrow">Handbook Mode</span>
-          <h1>部署、接入、排错都放在一页里</h1>
-          <p>这份帮助页按最终使用者来组织，而不是按源码开发流程来写。如果你拿到的是已经编译好的程序，只需要准备同目录的 <span class="k">config.json</span>、启动可执行文件、打开服务地址，然后按示例发请求即可。</p>
-          <div class="hero-bullets">
-            <div class="hero-bullet"><strong>更像产品手册</strong><span>把快速开始、配置、接口、FAQ 和排障拆成独立章节。</span></div>
-            <div class="hero-bullet"><strong>更贴近分发场景</strong><span>默认假设你运行的是二进制，而不是本地编译源码。</span></div>
-            <div class="hero-bullet"><strong>可直接复制使用</strong><span>保留可复制的配置、curl、Node 与 Python 示例。</span></div>
+        <div class="hero-main card">
+          <span class="eyebrow">Manual</span>
+          <h1>部署、接入、排错放在一页</h1>
+          <p>这份帮助页面向实际使用者组织，不按源码结构来写。你只需要准备同目录的 <code>config.json</code>、启动程序、确认服务在线，再按示例请求即可。</p>
+          <div class="hero-grid">
+            <div class="mini"><strong>更像产品手册</strong><span>把准备、配置、接口、示例和排错拆成清晰章节。</span></div>
+            <div class="mini"><strong>更贴近分发场景</strong><span>默认你拿到的是二进制程序，而不是源码工程。</span></div>
+            <div class="mini"><strong>可直接复制</strong><span>保留配置、curl、Node.js 和 Python 示例。</span></div>
           </div>
         </div>
-        <aside class="hero-side panel reveal">
-          <div class="side-box">
-            <h2>当前服务地址</h2>
-            <p>Base URL：<span class="k" id="baseUrl">--</span></p>
-            <p>遥测接口：<span class="k" id="telemetryUrl">--</span></p>
-            <p>聊天接口：<span class="k" id="chatUrl">--</span></p>
-          </div>
-          <div class="side-box">
-            <h2>最短上手路径</h2>
-            <ul class="mini-list">
-              <li><strong>1.</strong> 解压分发包并确认 <code>config.json</code> 与程序同目录。</li>
-              <li><strong>2.</strong> 设置 <code>api_key</code>，需要代理时再填 <code>proxy</code>。</li>
-              <li><strong>3.</strong> 访问 <code>/api/telemetry</code> 确认服务已在线。</li>
-              <li><strong>4.</strong> 按 OpenAI 兼容格式请求 <code>/v1/chat/completions</code>。</li>
-            </ul>
-          </div>
+        <aside class="hero-side card">
+          <div class="side-box"><strong>当前服务地址</strong><span>Base URL: <code id="baseUrl">--</code></span><span>遥测接口: <code id="telemetryUrl">--</code></span><span>聊天接口: <code id="chatUrl">--</code></span></div>
+          <div class="side-box"><strong>最短上手路径</strong><span>1. 准备 <code>config.json</code></span><span>2. 设置 <code>api_key</code></span><span>3. 访问 <code>/api/telemetry</code></span><span>4. 请求 <code>/v1/chat/completions</code></span></div>
         </aside>
       </section>
 
       <div class="layout">
-        <aside class="nav panel reveal" id="manualNav">
+        <aside class="nav card" id="manualNav">
           <h2>目录</h2>
           <a href="#prepare"><span class="num">01</span><span>部署前准备</span></a>
-          <a href="#quickstart"><span class="num">02</span><span>四步快速开始</span></a>
+          <a href="#quickstart"><span class="num">02</span><span>快速开始</span></a>
           <a href="#config"><span class="num">03</span><span>配置项说明</span></a>
-          <a href="#endpoints"><span class="num">04</span><span>接口总览</span></a>
-          <a href="#samples"><span class="num">05</span><span>请求示例</span></a>
-          <a href="#session"><span class="num">06</span><span>会话与流式</span></a>
+          <a href="#pool"><span class="num">04</span><span>多账号号池</span></a>
+          <a href="#endpoints"><span class="num">05</span><span>接口总览</span></a>
+          <a href="#samples"><span class="num">06</span><span>请求示例</span></a>
           <a href="#trouble"><span class="num">07</span><span>故障排查</span></a>
-          <a href="#faq"><span class="num">08</span><span>常见问题</span></a>
         </aside>
 
         <main class="sections">
-          <article class="card panel reveal" id="prepare">
-            <div class="sec-head">
-              <div><h2>部署前准备</h2><p>先确认分发包、配置文件和访问方式，避免一开始就把问题带到接口层。</p></div>
-              <span class="pill">Binary First</span>
-            </div>
-            <div class="sec-body">
+          <article class="card" id="prepare">
+            <div class="section-head"><div><h2>部署前准备</h2><p>先确认程序、配置文件和访问方式，避免把基础问题带到接口层。</p></div><span class="pill">Binary First</span></div>
+            <div class="section-body">
               <div class="grid2">
                 <div class="mini"><strong>你需要准备什么</strong><span>可执行文件、同目录的 <code>config.json</code>、可用网络环境，以及你自定义的 <code>api_key</code>。</span></div>
-                <div class="mini"><strong>建议先做什么</strong><span>优先确认 <code>/api/telemetry</code> 返回 JSON，再开始接 SDK 或 curl。</span></div>
-              </div>
-              <div class="grid2" style="margin-top:14px">
-                <div class="call good"><strong>推荐目录结构</strong><span>把可执行文件和 <code>config.json</code> 放在同一目录，部署、迁移和备份都更简单。</span></div>
-                <div class="call warn"><strong>不要先想着编译源码</strong><span>当前帮助页服务的是分发出去的成品程序，除非你本身就是维护者。</span></div>
+                <div class="mini"><strong>建议先做什么</strong><span>优先确认 <code>/api/telemetry</code> 能返回 JSON，再开始接 SDK 或 curl。</span></div>
               </div>
             </div>
           </article>
 
-          <article class="card panel reveal" id="quickstart">
-            <div class="sec-head">
-              <div><h2>四步快速开始</h2><p>目标是让第一次接入的用户在几分钟内跑通请求链路。</p></div>
-              <span class="pill">4 Steps</span>
-            </div>
-            <div class="sec-body">
+          <article class="card" id="quickstart">
+            <div class="section-head"><div><h2>快速开始</h2><p>目标是让第一次接入的用户在几分钟内跑通完整链路。</p></div><span class="pill">4 Steps</span></div>
+            <div class="section-body">
               <div class="grid2">
-                <div class="step"><span class="step-no">1</span><strong>编辑配置</strong><span>打开 <code>config.json</code>，先设置 <code>api_key</code>。只有需要代理或 Cookie 时再补其他字段。</span></div>
-                <div class="step"><span class="step-no">2</span><strong>启动程序</strong><span>Windows 可双击程序；命令行可运行 <code>.\&lt;程序名&gt;.exe</code>，Linux/macOS 可执行 <code>./&lt;程序名&gt;</code>。</span></div>
-                <div class="step"><span class="step-no">3</span><strong>检查服务</strong><span>访问 <code>/api/telemetry</code>，确认状态、请求数和 uptime 返回正常。</span></div>
+                <div class="step"><span class="step-no">1</span><strong>编辑配置</strong><span>先设置 <code>api_key</code>。只有需要代理或 Cookie 时再补其他字段。</span></div>
+                <div class="step"><span class="step-no">2</span><strong>启动程序</strong><span>Windows 可双击程序，命令行也可直接运行可执行文件。</span></div>
+                <div class="step"><span class="step-no">3</span><strong>检查服务</strong><span>访问 <code>/api/telemetry</code>，确认状态与 uptime 正常。</span></div>
                 <div class="step"><span class="step-no">4</span><strong>发送请求</strong><span>向 <code>/v1/chat/completions</code> 发 OpenAI 兼容请求，并带上 Bearer Key。</span></div>
               </div>
               <div class="code">
@@ -165,47 +113,71 @@
               </div>
             </div>
           </article>
-          <article class="card panel reveal" id="config">
-            <div class="sec-head">
-              <div><h2>配置项说明</h2><p>只展示真正影响交付的字段，避免帮助页继续堆技术噪声。</p></div>
-              <span class="pill">KISS</span>
-            </div>
-            <div class="sec-body">
-              <div class="grid4">
+
+          <article class="card" id="config">
+            <div class="section-head"><div><h2>配置项说明</h2><p>只解释真正影响交付的字段，避免堆砌技术噪声。</p></div><span class="pill">Minimal</span></div>
+            <div class="section-body">
+              <div class="grid2">
                 <div class="mini"><strong>api_key</strong><span>对外暴露给客户端的 Bearer Key，请求头使用 <code>Authorization: Bearer &lt;api_key&gt;</code>。</span></div>
-                <div class="mini"><strong>proxy</strong><span>只有在网络环境需要代理时才填写，例如 <code>http://127.0.0.1:7890</code>。能不配就不配。</span></div>
-                <div class="mini"><strong>cookies</strong><span>用于 Gemini Web Cookie 场景，能提高 token 获取与刷新稳定性，不是所有部署都需要。</span></div>
-                <div class="mini"><strong>log_level</strong><span>排错时建议临时切到 <code>debug</code>，问题恢复后再切回 <code>info</code>。</span></div>
-              </div>
-              <div class="call warn" style="margin-top:14px"><strong>关于保留字段</strong><span>像 <code>tokens</code> 这类当前没有实际行为的字段，不建议在主流程里强调，避免用户误以为必须配置。</span></div>
-            </div>
-          </article>
-
-          <article class="card panel reveal" id="endpoints">
-            <div class="sec-head">
-              <div><h2>接口总览</h2><p>把常用入口讲清楚，比堆大段说明更适合用户手册阅读。</p></div>
-              <span class="pill">OpenAI Compatible</span>
-            </div>
-            <div class="sec-body">
-              <div class="grid4">
-                <div class="mini"><strong><code>GET /api/telemetry</code></strong><span>查看服务是否在线，以及请求数、RPM 和 token 统计。</span></div>
-                <div class="mini"><strong><code>GET /v1/models</code></strong><span>用于模型列表探测，适合 SDK 初始化或健康检查。</span></div>
-                <div class="mini"><strong><code>POST /v1/chat/completions</code></strong><span>主要对话入口，兼容 OpenAI Chat Completions 格式。</span></div>
-                <div class="mini"><strong><code>GET /</code> 与 <code>GET /help</code></strong><span>分别是监控大屏与用户手册，适合部署者和一线使用者查看。</span></div>
+                <div class="mini"><strong>proxy</strong><span>只有网络环境需要代理时才填写，例如 <code>http://127.0.0.1:7890</code>。</span></div>
+                <div class="mini"><strong>cookies</strong><span>用于 Gemini Web 登录态场景，可提高 token 获取和刷新稳定性。</span></div>
+                <div class="mini"><strong>log_level</strong><span>排错时建议临时切到 <code>debug</code>，恢复后再切回 <code>info</code>。</span></div>
               </div>
             </div>
           </article>
 
-          <article class="card panel reveal" id="samples">
-            <div class="sec-head">
-              <div><h2>请求示例</h2><p>所有示例会自动带入当前页面的 Base URL，复制后改 key 即可。</p></div>
-              <div class="tabs">
-                <button class="tab active" type="button" data-tab="curl">curl</button>
-                <button class="tab" type="button" data-tab="node">Node.js</button>
-                <button class="tab" type="button" data-tab="python">Python</button>
+          <article class="card" id="pool">
+            <div class="section-head"><div><h2>多账号号池</h2><p>当前版本已经支持多账号、会话绑定、轮询调度和失败指数避退。</p></div><span class="pill">Pool</span></div>
+            <div class="section-body">
+              <div class="grid3">
+                <div class="mini"><strong>会话绑定</strong><span>同一个 <code>X-Session-ID</code> 会优先继续走同一个账号。</span></div>
+                <div class="mini"><strong>轮询分配</strong><span>新会话会在健康账号之间按权重轮询分配。</span></div>
+                <div class="mini"><strong>指数避退</strong><span>账号失败后会进入 30 秒起步、最高 30 分钟的 backoff。</span></div>
+              </div>
+              <div class="code">
+                <div class="code-top"><span>accounts 配置示例</span><button class="copy" type="button" data-copy-target="poolExample">复制</button></div>
+                <pre id="poolExample">{
+  "api_key": "change-me",
+  "accounts": [
+    {
+      "id": "acc-1",
+      "email": "first@example.com",
+      "cookies": "SID=...; APISID=...",
+      "token": "",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "acc-2",
+      "email": "second@example.com",
+      "cookies": "SID=...; APISID=...",
+      "token": "",
+      "enabled": true,
+      "weight": 1
+    }
+  ]
+}</pre>
               </div>
             </div>
-            <div class="sec-body">
+          </article>
+
+          <article class="card" id="endpoints">
+            <div class="section-head"><div><h2>接口总览</h2><p>把真正常用的入口集中讲清楚。</p></div><span class="pill">API</span></div>
+            <div class="section-body">
+              <div class="grid3">
+                <div class="mini"><strong><code>GET /api/telemetry</code></strong><span>查看服务在线状态、请求数、RPM 和 token 统计。</span></div>
+                <div class="mini"><strong><code>GET /api/accounts</code></strong><span>查看账号池与当前绑定状态，需 Bearer Key。</span></div>
+                <div class="mini"><strong><code>POST /api/accounts</code></strong><span>新增或更新账号，需 Bearer Key。</span></div>
+                <div class="mini"><strong><code>POST /api/accounts/{id}/refresh</code></strong><span>立即刷新某个账号的 token 状态。</span></div>
+                <div class="mini"><strong><code>GET /v1/models</code></strong><span>适合 SDK 初始化、探活或模型发现。</span></div>
+                <div class="mini"><strong><code>POST /v1/chat/completions</code></strong><span>主要聊天入口，兼容 OpenAI Chat Completions。</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card" id="samples">
+            <div class="section-head"><div><h2>请求示例</h2><p>所有示例会自动带入当前页面的 Base URL。</p></div><div class="tabs"><button class="tab active" type="button" data-tab="curl">curl</button><button class="tab" type="button" data-tab="node">Node.js</button><button class="tab" type="button" data-tab="python">Python</button></div></div>
+            <div class="section-body">
               <div class="tab-panel active" data-panel="curl">
                 <div class="code">
                   <div class="code-top"><span>chat completions</span><button class="copy" type="button" data-copy-target="curlChat">复制</button></div>
@@ -215,19 +187,11 @@
   -H "X-Session-ID: demo-session" \
   -d '{"model":"gemini-3-flash","stream":false,"messages":[{"role":"user","content":"你好"}]}'</pre>
                 </div>
-                <div class="code">
-                  <div class="code-top"><span>streaming sse</span><button class="copy" type="button" data-copy-target="curlStream">复制</button></div>
-                  <pre id="curlStream">curl -N "{{BASE}}/v1/chat/completions" \
-  -H "Authorization: Bearer change-me" \
-  -H "Content-Type: application/json" \
-  -H "X-Session-ID: demo-session" \
-  -d '{"model":"gemini-3-flash","stream":true,"messages":[{"role":"user","content":"用三句话介绍你自己"}]}'</pre>
-                </div>
               </div>
               <div class="tab-panel" data-panel="node">
                 <div class="code">
-                  <div class="code-top"><span>openai node sdk</span><button class="copy" type="button" data-copy-target="sdkNode">复制</button></div>
-                  <pre id="sdkNode">import OpenAI from "openai";
+                  <div class="code-top"><span>Node.js</span><button class="copy" type="button" data-copy-target="nodeExample">复制</button></div>
+                  <pre id="nodeExample">import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: "change-me",
@@ -244,17 +208,17 @@ console.log(resp.choices[0]?.message?.content);</pre>
               </div>
               <div class="tab-panel" data-panel="python">
                 <div class="code">
-                  <div class="code-top"><span>openai python sdk</span><button class="copy" type="button" data-copy-target="sdkPython">复制</button></div>
-                  <pre id="sdkPython">from openai import OpenAI
+                  <div class="code-top"><span>Python</span><button class="copy" type="button" data-copy-target="pythonExample">复制</button></div>
+                  <pre id="pythonExample">from openai import OpenAI
 
 client = OpenAI(
-  api_key="change-me",
-  base_url="{{BASE}}",
+    api_key="change-me",
+    base_url="{{BASE}}",
 )
 
 resp = client.chat.completions.create(
-  model="gemini-3-flash",
-  messages=[{"role": "user", "content": "你好"}],
+    model="gemini-3-flash",
+    messages=[{"role": "user", "content": "你好"}],
 )
 
 print(resp.choices[0].message.content)</pre>
@@ -262,170 +226,34 @@ print(resp.choices[0].message.content)</pre>
               </div>
             </div>
           </article>
-          <article class="card panel reveal" id="session">
-            <div class="sec-head">
-              <div><h2>会话与流式说明</h2><p>把多轮对话保持逻辑讲清楚，用户才能稳定复现问题与结果。</p></div>
-              <span class="pill">Session</span>
-            </div>
-            <div class="sec-body">
-              <div class="grid2">
-                <div class="call good"><strong>会话保持</strong><span>多轮对话时固定使用同一个 <code>X-Session-ID</code>，或者在请求体里传 <code>conversation_id</code>。</span></div>
-                <div class="call"><strong>SSE 结束标记</strong><span>当 <code>stream=true</code> 时，服务会以 SSE 方式返回分块内容，并最终以 <code>data: [DONE]</code> 收尾。</span></div>
-                <div class="call warn"><strong>代理对流式更敏感</strong><span>如果流式返回中断，先检查代理与网络质量，再看是否需要降低并发。</span></div>
-              </div>
-            </div>
-          </article>
 
-          <article class="card panel reveal" id="trouble">
-            <div class="sec-head">
-              <div><h2>故障排查</h2><p>把高频问题前置，减少“像程序坏了，实际上是环境没通”的误判。</p></div>
-              <span class="pill">Troubleshooting</span>
-            </div>
-            <div class="sec-body">
+          <article class="card" id="trouble">
+            <div class="section-head"><div><h2>故障排查</h2><p>把常见问题先定位到网络、鉴权、登录态和会话这几个方向。</p></div><span class="pill">Troubleshoot</span></div>
+            <div class="section-body">
               <div class="faq-grid">
-                <div class="faq"><strong>返回 HTML、验证码或被拦截</strong><span>通常是 Gemini 侧风控。优先更换 IP 或代理，必要时补充 <code>cookies</code>。</span></div>
-                <div class="faq"><strong>请求超时或连接被拒绝</strong><span>先检查 <code>proxy</code> 是否可用；没配代理时，再检查系统级网络环境。</span></div>
-                <div class="faq"><strong>多轮对话上下文丢失</strong><span>确认同一用户会话使用固定 <code>X-Session-ID</code>，不要每次随机生成。</span></div>
-                <div class="faq"><strong>需要更多排错信息</strong><span>把 <code>log_level</code> 临时改成 <code>debug</code>，复现问题后再切回常规级别。</span></div>
-              </div>
-              <div class="call danger" style="margin-top:14px"><strong>安全提醒</strong><span><code>api_key</code> 和 <code>cookies</code> 都属于敏感信息，不要提交到 Git，也不要直接暴露到公共网络。</span></div>
-            </div>
-          </article>
-
-          <article class="card panel reveal" id="faq">
-            <div class="sec-head">
-              <div><h2>常见问题</h2><p>最后再补充用户最容易问到的几个判断点。</p></div>
-              <span class="pill">FAQ</span>
-            </div>
-            <div class="sec-body">
-              <div class="faq-grid">
-                <div class="faq"><strong>必须配置所有字段吗？</strong><span>不需要。通常只要 <code>api_key</code> 就可以开始，其他配置按需启用即可。</span></div>
-                <div class="faq"><strong>为什么强调二进制分发？</strong><span>因为交付对象拿到的大多是成品程序。手册应该服务部署和调用，而不是让普通用户去理解源码结构。</span></div>
-                <div class="faq"><strong>服务启动后先看哪里？</strong><span>先看监控大屏和 <code>/api/telemetry</code>。如果服务自身没在线，SDK 示例再正确也跑不通。</span></div>
-                <div class="faq"><strong>怎么验证调用成功？</strong><span>一是响应体正常返回，二是监控大屏里的总请求数、成功数和 token 统计出现变化。</span></div>
+                <div class="faq"><strong>请求 401</strong><span>确认调用接口时带了 <code>Authorization: Bearer &lt;api_key&gt;</code>，并且 key 与 <code>config.json</code> 一致。</span></div>
+                <div class="faq"><strong>Gemini 无响应或超时</strong><span>先检查 <code>proxy</code> 是否有效，再看网络环境是否能正常访问 Gemini。</span></div>
+                <div class="faq"><strong>页面态抓取失败</strong><span>优先补充有效的 <code>cookies</code>，必要时也可以临时填写手动 <code>token</code>。</span></div>
+                <div class="faq"><strong>多轮对话不连续</strong><span>保持同一个 <code>X-Session-ID</code>，让服务端能维持账号绑定和上下文连续性。</span></div>
               </div>
             </div>
           </article>
         </main>
       </div>
-
-      <div class="footer panel">
-        <span>提示：<a href="/">监控大屏</a> 用来看运行状态，<a href="#samples">请求示例</a> 用来直接接入客户端。</span>
-        <span>常用地址：<span class="k">/api/telemetry</span> · <span class="k">/v1/chat/completions</span> · <span class="k">/help</span></span>
-      </div>
     </div>
 
+    <footer class="shell footer">Gemini Web 2 API · White Manual Surface</footer>
+
     <script>
-      const root=document.body,themeToggle=document.getElementById("themeToggle"),themeKey="gemini-ui-theme",langKey="gemini-ui-lang",prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
-      const langButtons={en:document.getElementById("langEn"),zh:document.getElementById("langZh")};
-      function applyTheme(theme){root.setAttribute("data-theme",theme);themeToggle.textContent=theme==="dark"?(currentLang==="zh"?"切换到亮色":"Switch to Light"):(currentLang==="zh"?"切换到暗色":"Switch to Dark")}
-      const savedTheme=localStorage.getItem(themeKey);
-      let currentLang=localStorage.getItem(langKey)||"en";
-      const i18n={
-        en:{
-          title:"Gemini Web 2 API Manual",
-          htmlLang:"en",
-          texts:[
-            [".brand span","User Manual · Binary Distribution"],
-            ["#langZh","中文"],["#themeToggle","Switch to Dark"],[".actions a","Back to Dashboard"],
-            [".hero-main h1","Deploy, connect, and troubleshoot from one manual"],
-            [".hero-main p",'This page is organized for end users, not for source-code readers. If you received a compiled binary, place <span class="k">config.json</span> beside the executable, start the program, open the service URL, and call it with the examples below.',true],
-            [".hero-bullet:nth-child(1) strong","Manual-first structure"],[".hero-bullet:nth-child(1) span","Quick start, config, endpoints, FAQ, and troubleshooting are separated into clear sections."],
-            [".hero-bullet:nth-child(2) strong","Built for binary delivery"],[".hero-bullet:nth-child(2) span","The guide assumes you run a packaged executable, not that you build the source tree yourself."],
-            [".hero-bullet:nth-child(3) strong","Copy-ready examples"],[".hero-bullet:nth-child(3) span","Config snippets, curl examples, and SDK samples are ready to paste."],
-            [".side-box:nth-child(1) h2","Current Service URLs"],[".side-box:nth-child(1) p:nth-of-type(1)",'Base URL: <span class="k" id="baseUrl">--</span>',true],[".side-box:nth-child(1) p:nth-of-type(2)",'Telemetry: <span class="k" id="telemetryUrl">--</span>',true],[".side-box:nth-child(1) p:nth-of-type(3)",'Chat API: <span class="k" id="chatUrl">--</span>',true],
-            [".side-box:nth-child(2) h2","Fastest Path to First Request"],
-            [".side-box:nth-child(2) li:nth-child(1)","1. Unpack the release and keep <code>config.json</code> in the same folder as the executable.",true],
-            [".side-box:nth-child(2) li:nth-child(2)","2. Set <code>api_key</code>; only fill <code>proxy</code> if your network actually needs it.",true],
-            [".side-box:nth-child(2) li:nth-child(3)","3. Open <code>/api/telemetry</code> to verify the service is online.",true],
-            [".side-box:nth-child(2) li:nth-child(4)","4. Send OpenAI-compatible requests to <code>/v1/chat/completions</code>.",true],
-            ["#manualNav h2","Contents"],
-            ['a[href="#prepare"] span:last-child',"Before You Start"],['a[href="#quickstart"] span:last-child',"Quick Start"],['a[href="#config"] span:last-child',"Configuration"],['a[href="#endpoints"] span:last-child',"Endpoints"],['a[href="#samples"] span:last-child',"Examples"],['a[href="#session"] span:last-child',"Sessions & Streaming"],['a[href="#trouble"] span:last-child',"Troubleshooting"],['a[href="#faq"] span:last-child',"FAQ"],
-            ["#prepare h2","Before You Start"],["#prepare .sec-head p","Confirm the binary package, config file, and access path before debugging requests."],["#prepare .pill","Binary First"],
-            ["#prepare .mini:nth-child(1) strong","What you need"],["#prepare .mini:nth-child(1) span",'The executable, a sibling <code>config.json</code>, usable network access, and your own <code>api_key</code>.',true],
-            ["#prepare .mini:nth-child(2) strong","What to check first"],["#prepare .mini:nth-child(2) span",'Verify <code>/api/telemetry</code> returns JSON before you try SDK or curl integrations.',true],
-            ["#prepare .call.good strong","Recommended layout"],["#prepare .call.good span",'Keep the executable and <code>config.json</code> together for easier deployment, migration, and backup.',true],
-            ["#prepare .call.warn strong","Do not start from source compilation"],["#prepare .call.warn span","This page is written for distributed binaries. Unless you maintain the project, you usually do not need the source tree."],
-            ["#quickstart h2","4-Step Quick Start"],["#quickstart .sec-head p","Designed to get a first successful request in just a few minutes."],
-            ["#quickstart .step:nth-child(1) strong","Edit config"],["#quickstart .step:nth-child(1) span",'Open <code>config.json</code> and set <code>api_key</code>. Add proxy or cookies only when the environment requires them.',true],
-            ["#quickstart .step:nth-child(2) strong","Start the program"],["#quickstart .step:nth-child(2) span",'On Windows you can double-click the executable; in a terminal use <code>.\\&lt;program&gt;.exe</code> or <code>./&lt;program&gt;</code>.',true],
-            ["#quickstart .step:nth-child(3) strong","Check service health"],["#quickstart .step:nth-child(3) span",'Open <code>/api/telemetry</code> and confirm uptime, counters, and status are present.',true],
-            ["#quickstart .step:nth-child(4) strong","Send a request"],["#quickstart .step:nth-child(4) span",'Call <code>/v1/chat/completions</code> with an OpenAI-compatible payload and a Bearer key.',true],
-            ["#quickstart .code-top span","config.json example"],
-            ["#config h2","Configuration Notes"],["#config .sec-head p","Only the fields that matter to actual delivery are highlighted here."],
-            ["#config .mini:nth-child(1) strong","api_key"],["#config .mini:nth-child(1) span",'The Bearer key your clients use to access this service.',true],
-            ["#config .mini:nth-child(2) strong","proxy"],["#config .mini:nth-child(2) span",'Set it only when your network requires a proxy, for example <code>http://127.0.0.1:7890</code>.',true],
-            ["#config .mini:nth-child(3) strong","cookies"],["#config .mini:nth-child(3) span","Useful in Gemini Web cookie scenarios to improve token fetch and refresh stability."],
-            ["#config .mini:nth-child(4) strong","log_level"],["#config .mini:nth-child(4) span",'Use <code>debug</code> for troubleshooting, then switch back to <code>info</code>.',true],
-            ["#config .call.warn strong","About reserved fields"],["#config .call.warn span",'Fields like <code>tokens</code> are not part of the main user path right now and should not be treated as mandatory.',true],
-            ["#endpoints h2","Endpoint Overview"],["#endpoints .sec-head p","Clear entry points are more useful than long paragraphs in a manual."],
-            ["#endpoints .mini:nth-child(1) span","Check whether the service is online, plus counters, RPM, and token totals."],["#endpoints .mini:nth-child(2) span","Useful for SDK discovery, probing, or health checks."],["#endpoints .mini:nth-child(3) span","Primary OpenAI-compatible chat entry point."],["#endpoints .mini:nth-child(4) span","Dashboard and manual pages for operators and end users."],
-            ["#samples h2","Request Examples"],["#samples .sec-head p","Examples automatically use the current Base URL; replace the key and call."],['.tab[data-tab="python"]',"Python"],["#samples .code:nth-child(1) .code-top span","chat completions"],["#samples .code:nth-child(2) .code-top span","streaming sse"],["#samples [data-panel='node'] .code-top span","openai node sdk"],["#samples [data-panel='python'] .code-top span","openai python sdk"],
-            ["#session h2","Sessions and Streaming"],["#session .sec-head p","Explain conversation continuity clearly so users can reproduce stable results."],["#session .call.good strong","Session continuity"],["#session .call.good span",'Use a fixed <code>X-Session-ID</code> for multi-turn chats, or send <code>conversation_id</code> in the body.',true],["#session .call:nth-child(2) strong","SSE terminator"],["#session .call:nth-child(2) span",'When <code>stream=true</code>, the service emits SSE chunks and ends with <code>data: [DONE]</code>.',true],["#session .call.warn strong","Streaming is proxy-sensitive"],["#session .call.warn span","If streaming breaks, check proxy quality and network stability before changing app logic."],
-            ["#trouble h2","Troubleshooting"],["#trouble .sec-head p","Put high-frequency issues first so operators can separate app issues from environment issues."],["#trouble .faq:nth-child(1) strong","HTML, captcha, or blocked responses"],["#trouble .faq:nth-child(1) span",'Usually Gemini-side protection. Change IP/proxy first and add <code>cookies</code> if needed.',true],["#trouble .faq:nth-child(2) strong","Timeout or connection refused"],["#trouble .faq:nth-child(2) span",'Check <code>proxy</code> first; if not used, verify the machine network path.',true],["#trouble .faq:nth-child(3) strong","Conversation context lost"],["#trouble .faq:nth-child(3) span",'Keep <code>X-Session-ID</code> stable for the same user session.',true],["#trouble .faq:nth-child(4) strong","Need more logs"],["#trouble .faq:nth-child(4) span",'Temporarily set <code>log_level</code> to <code>debug</code>, reproduce, then switch back.',true],["#trouble .call.danger strong","Security reminder"],["#trouble .call.danger span",'Treat <code>api_key</code> and <code>cookies</code> as secrets. Do not commit them or expose them publicly.',true],
-            ["#faq h2","FAQ"],["#faq .sec-head p","The last section answers the questions users most commonly ask on first contact."],["#faq .faq:nth-child(1) strong","Do I need every field?"],["#faq .faq:nth-child(1) span",'No. In most cases <code>api_key</code> is enough to begin; other fields are optional.',true],["#faq .faq:nth-child(2) strong","Why emphasize binary distribution?"],["#faq .faq:nth-child(2) span","Because most consumers receive a finished executable. The manual should serve deployment and usage, not source reading."],["#faq .faq:nth-child(3) strong","What should I inspect first after startup?"],["#faq .faq:nth-child(3) span",'Start with the dashboard and <code>/api/telemetry</code>. If the service is not online, SDK examples will not help.',true],["#faq .faq:nth-child(4) strong","How do I confirm successful calls?"],["#faq .faq:nth-child(4) span","Look for a valid response and watch total requests, successes, and token counters change on the dashboard."],
-            [".footer span:first-child",'Tip: <a href="/">Dashboard</a> shows runtime health, while <a href="#samples">examples</a> are meant for direct client integration.',true],
-            [".footer span:last-child",'Common URLs: <span class="k">/api/telemetry</span> · <span class="k">/v1/chat/completions</span> · <span class="k">/help</span>',true]
-          ],
-          code:{
-            configExample:`{\n  "api_key": "change-me",\n  "proxy": "",\n  "cookies": "",\n  "log_level": "info",\n  "note": ["geminiweb2api running"]\n}`,
-            curlChat:`curl -s "{{BASE}}/v1/chat/completions" \\\n  -H "Authorization: Bearer change-me" \\\n  -H "Content-Type: application/json" \\\n  -H "X-Session-ID: demo-session" \\\n  -d '{"model":"gemini-3-flash","stream":false,"messages":[{"role":"user","content":"Hello"}]}'`,
-            curlStream:`curl -N "{{BASE}}/v1/chat/completions" \\\n  -H "Authorization: Bearer change-me" \\\n  -H "Content-Type: application/json" \\\n  -H "X-Session-ID: demo-session" \\\n  -d '{"model":"gemini-3-flash","stream":true,"messages":[{"role":"user","content":"Introduce yourself in three sentences"}]}'`,
-            sdkNode:`import OpenAI from "openai";\n\nconst client = new OpenAI({\n  apiKey: "change-me",\n  baseURL: "{{BASE}}",\n});\n\nconst resp = await client.chat.completions.create({\n  model: "gemini-3-flash",\n  messages: [{ role: "user", content: "Hello" }],\n});\n\nconsole.log(resp.choices[0]?.message?.content);`,
-            sdkPython:`from openai import OpenAI\n\nclient = OpenAI(\n  api_key="change-me",\n  base_url="{{BASE}}",\n)\n\nresp = client.chat.completions.create(\n  model="gemini-3-flash",\n  messages=[{"role": "user", "content": "Hello"}],\n)\n\nprint(resp.choices[0].message.content)`
-          },
-          copy:"Copy",
-          copied:"Copied"
-        },
-        zh:{
-          title:"Gemini Web 2 API 使用手册",
-          htmlLang:"zh-CN",
-          texts:[
-            [".brand span","用户手册 · 面向二进制分发版本"],["#langZh","中文"],["#themeToggle","切换到暗色"],[".actions a","返回监控大屏"]
-          ],
-          code:{
-            configExample:`{\n  "api_key": "change-me",\n  "proxy": "",\n  "cookies": "",\n  "log_level": "info",\n  "note": ["geminiweb2api running"]\n}`,
-            curlChat:`curl -s "{{BASE}}/v1/chat/completions" \\\n  -H "Authorization: Bearer change-me" \\\n  -H "Content-Type: application/json" \\\n  -H "X-Session-ID: demo-session" \\\n  -d '{"model":"gemini-3-flash","stream":false,"messages":[{"role":"user","content":"你好"}]}'`,
-            curlStream:`curl -N "{{BASE}}/v1/chat/completions" \\\n  -H "Authorization: Bearer change-me" \\\n  -H "Content-Type: application/json" \\\n  -H "X-Session-ID: demo-session" \\\n  -d '{"model":"gemini-3-flash","stream":true,"messages":[{"role":"user","content":"用三句话介绍你自己"}]}'`,
-            sdkNode:`import OpenAI from "openai";\n\nconst client = new OpenAI({\n  apiKey: "change-me",\n  baseURL: "{{BASE}}",\n});\n\nconst resp = await client.chat.completions.create({\n  model: "gemini-3-flash",\n  messages: [{ role: "user", content: "你好" }],\n});\n\nconsole.log(resp.choices[0]?.message?.content);`,
-            sdkPython:`from openai import OpenAI\n\nclient = OpenAI(\n  api_key="change-me",\n  base_url="{{BASE}}",\n)\n\nresp = client.chat.completions.create(\n  model="gemini-3-flash",\n  messages=[{"role": "user", "content": "你好"}],\n)\n\nprint(resp.choices[0].message.content)`
-          },
-          copy:"复制",
-          copied:"已复制"
-        }
-      };
-      function setContent(selector,value,html=false){const el=document.querySelector(selector);if(!el) return;html?el.innerHTML=value:el.textContent=value}
-      function renderLanguage(lang){
-        currentLang=lang;
-        const pack=i18n[lang];
-        document.title=pack.title;
-        document.documentElement.lang=pack.htmlLang;
-        i18n.en.texts.forEach(([selector,value,html])=>setContent(selector,value,html));
-        if(lang==="zh"){
-          const zhExtra=[
-            [".hero-main h1","部署、接入、排错都放在一页里"],[".hero-main p",'这份帮助页按最终使用者来组织，而不是按源码开发流程来写。如果你拿到的是已经编译好的程序，只需要准备同目录的 <span class="k">config.json</span>、启动可执行文件、打开服务地址，然后按示例发请求即可。',true],[".hero-bullet:nth-child(1) strong","更像产品手册"],[".hero-bullet:nth-child(1) span","把快速开始、配置、接口、FAQ 和排障拆成独立章节。"],[".hero-bullet:nth-child(2) strong","更贴近分发场景"],[".hero-bullet:nth-child(2) span","默认假设你运行的是二进制，而不是本地编译源码。"],[".hero-bullet:nth-child(3) strong","可直接复制使用"],[".hero-bullet:nth-child(3) span","保留可复制的配置、curl、Node 与 Python 示例。"],[".side-box:nth-child(1) h2","当前服务地址"],[".side-box:nth-child(1) p:nth-of-type(1)",'Base URL： <span class="k" id="baseUrl">--</span>',true],[".side-box:nth-child(1) p:nth-of-type(2)",'遥测接口： <span class="k" id="telemetryUrl">--</span>',true],[".side-box:nth-child(1) p:nth-of-type(3)",'聊天接口： <span class="k" id="chatUrl">--</span>',true],[".side-box:nth-child(2) h2","最短上手路径"],[".side-box:nth-child(2) li:nth-child(1)","1. 解压分发包并确认 <code>config.json</code> 与程序同目录。",true],[".side-box:nth-child(2) li:nth-child(2)","2. 设置 <code>api_key</code>，需要代理时再填 <code>proxy</code>。",true],[".side-box:nth-child(2) li:nth-child(3)","3. 访问 <code>/api/telemetry</code> 确认服务已在线。",true],[".side-box:nth-child(2) li:nth-child(4)","4. 按 OpenAI 兼容格式请求 <code>/v1/chat/completions</code>。",true],["#manualNav h2","目录"],['a[href="#prepare"] span:last-child',"部署前准备"],['a[href="#quickstart"] span:last-child',"四步快速开始"],['a[href="#config"] span:last-child',"配置项说明"],['a[href="#endpoints"] span:last-child',"接口总览"],['a[href="#samples"] span:last-child',"请求示例"],['a[href="#session"] span:last-child',"会话与流式"],['a[href="#trouble"] span:last-child',"故障排查"],['a[href="#faq"] span:last-child',"常见问题"],["#prepare h2","部署前准备"],["#prepare .sec-head p","先确认分发包、配置文件和访问方式，避免一开始就把问题带到接口层。"],["#prepare .mini:nth-child(1) strong","你需要准备什么"],["#prepare .mini:nth-child(1) span",'可执行文件、同目录的 <code>config.json</code>、可用网络环境，以及你自定义的 <code>api_key</code>。',true],["#prepare .mini:nth-child(2) strong","建议先做什么"],["#prepare .mini:nth-child(2) span",'优先确认 <code>/api/telemetry</code> 返回 JSON，再开始接 SDK 或 curl。',true],["#prepare .call.good strong","推荐目录结构"],["#prepare .call.good span",'把可执行文件和 <code>config.json</code> 放在同一目录，部署、迁移和备份都更简单。',true],["#prepare .call.warn strong","不要先想着编译源码"],["#prepare .call.warn span","当前帮助页服务的是分发出去的成品程序，除非你本身就是维护者。"],["#quickstart h2","四步快速开始"],["#quickstart .sec-head p","目标是让第一次接入的用户在几分钟内跑通请求链路。"],["#quickstart .step:nth-child(1) strong","编辑配置"],["#quickstart .step:nth-child(1) span",'打开 <code>config.json</code>，先设置 <code>api_key</code>。只有需要代理或 Cookie 时再补其他字段。',true],["#quickstart .step:nth-child(2) strong","启动程序"],["#quickstart .step:nth-child(2) span",'Windows 可双击程序；命令行可运行 <code>.\\&lt;程序名&gt;.exe</code>，Linux/macOS 可执行 <code>./&lt;程序名&gt;</code>。',true],["#quickstart .step:nth-child(3) strong","检查服务"],["#quickstart .step:nth-child(3) span",'访问 <code>/api/telemetry</code>，确认状态、请求数和 uptime 返回正常。',true],["#quickstart .step:nth-child(4) strong","发送请求"],["#quickstart .step:nth-child(4) span",'向 <code>/v1/chat/completions</code> 发 OpenAI 兼容请求，并带上 Bearer Key。',true],["#quickstart .code-top span","config.json 示例"],["#config h2","配置项说明"],["#config .sec-head p","只展示真正影响交付的字段，避免帮助页继续堆技术噪声。"],["#config .mini:nth-child(2) span",'只有在网络环境需要代理时才填写，例如 <code>http://127.0.0.1:7890</code>。能不配就不配。',true],["#config .mini:nth-child(3) span","用于 Gemini Web Cookie 场景，能提高 token 获取与刷新稳定性，不是所有部署都需要。"],["#config .mini:nth-child(4) span",'排错时建议临时切到 <code>debug</code>，问题恢复后再切回 <code>info</code>。',true],["#config .call.warn strong","关于保留字段"],["#config .call.warn span",'像 <code>tokens</code> 这类当前没有实际行为的字段，不建议在主流程里强调，避免用户误以为必须配置。',true],["#endpoints h2","接口总览"],["#endpoints .sec-head p","把常用入口讲清楚，比堆大段说明更适合用户手册阅读。"],["#endpoints .mini:nth-child(1) span","查看服务是否在线，以及请求数、RPM 和 token 统计。"],["#endpoints .mini:nth-child(2) span","用于模型列表探测，适合 SDK 初始化或健康检查。"],["#endpoints .mini:nth-child(3) span","主要对话入口，兼容 OpenAI Chat Completions 格式。"],["#endpoints .mini:nth-child(4) span","分别是监控大屏与用户手册，适合部署者和一线使用者查看。"],["#samples h2","请求示例"],["#samples .sec-head p","所有示例会自动带入当前页面的 Base URL，复制后改 key 即可。"],["#session h2","会话与流式说明"],["#session .sec-head p","把多轮对话保持逻辑讲清楚，用户才能稳定复现问题与结果。"],["#session .call.good strong","会话保持"],["#session .call.good span",'多轮对话时固定使用同一个 <code>X-Session-ID</code>，或者在请求体里传 <code>conversation_id</code>。',true],["#session .call:nth-child(2) strong","SSE 结束标记"],["#session .call:nth-child(2) span",'当 <code>stream=true</code> 时，服务会以 SSE 方式返回分块内容，并最终以 <code>data: [DONE]</code> 收尾。',true],["#session .call.warn strong","代理对流式更敏感"],["#session .call.warn span","如果流式返回中断，先检查代理与网络质量，再看是否需要降低并发。"],["#trouble h2","故障排查"],["#trouble .sec-head p","把高频问题前置，减少“像程序坏了，实际上是环境没通”的误判。"],["#trouble .faq:nth-child(1) strong","返回 HTML、验证码或被拦截"],["#trouble .faq:nth-child(1) span",'通常是 Gemini 侧风控。优先更换 IP 或代理，必要时补充 <code>cookies</code>。',true],["#trouble .faq:nth-child(2) strong","请求超时或连接被拒绝"],["#trouble .faq:nth-child(2) span",'先检查 <code>proxy</code> 是否可用；没配代理时，再检查系统级网络环境。',true],["#trouble .faq:nth-child(3) strong","多轮对话上下文丢失"],["#trouble .faq:nth-child(3) span",'确认同一用户会话使用固定 <code>X-Session-ID</code>，不要每次随机生成。',true],["#trouble .faq:nth-child(4) strong","需要更多排错信息"],["#trouble .faq:nth-child(4) span",'把 <code>log_level</code> 临时改成 <code>debug</code>，复现问题后再切回常规级别。',true],["#trouble .call.danger strong","安全提醒"],["#trouble .call.danger span",'<code>api_key</code> 和 <code>cookies</code> 都属于敏感信息，不要提交到 Git，也不要直接暴露到公共网络。',true],["#faq h2","常见问题"],["#faq .sec-head p","最后再补充用户最容易问到的几个判断点。"],["#faq .faq:nth-child(1) strong","必须配置所有字段吗？"],["#faq .faq:nth-child(1) span",'不需要。通常只要 <code>api_key</code> 就可以开始，其他配置按需启用即可。',true],["#faq .faq:nth-child(2) strong","为什么强调二进制分发？"],["#faq .faq:nth-child(2) span","因为交付对象拿到的大多是成品程序。手册应该服务部署和调用，而不是让普通用户去理解源码结构。"],["#faq .faq:nth-child(3) strong","服务启动后先看哪里？"],["#faq .faq:nth-child(3) span",'先看监控大屏和 <code>/api/telemetry</code>。如果服务自身没在线，SDK 示例再正确也跑不通。',true],["#faq .faq:nth-child(4) strong","怎么验证调用成功？"],["#faq .faq:nth-child(4) span","一是响应体正常返回，二是监控大屏里的总请求数、成功数和 token 统计出现变化。"],[".footer span:first-child",'提示：<a href="/">监控大屏</a> 用来看运行状态，<a href="#samples">请求示例</a> 用来直接接入客户端。',true],[".footer span:last-child",'常用地址：<span class="k">/api/telemetry</span> · <span class="k">/v1/chat/completions</span> · <span class="k">/help</span>',true]
-          ];
-          zhExtra.forEach(([selector,value,html])=>setContent(selector,value,html));
-        }
-        Object.entries(pack.code).forEach(([id,value])=>{const el=document.getElementById(id);if(el) el.textContent=value.replaceAll("{{BASE}}",location.origin)});
-        document.querySelectorAll("[data-copy-target]").forEach(btn=>btn.textContent=pack.copy);
-        langButtons.en.style.borderColor=lang==="en"?"color-mix(in srgb,var(--accent) 45%,var(--line2))":"";
-        langButtons.zh.style.borderColor=lang==="zh"?"color-mix(in srgb,var(--accent) 45%,var(--line2))":"";
-        applyTheme(root.getAttribute("data-theme")||"light");
-      }
-      applyTheme(savedTheme||(prefersDark.matches?"dark":"light"));
-      renderLanguage(currentLang);
-      themeToggle.addEventListener("click",()=>{const next=root.getAttribute("data-theme")==="dark"?"light":"dark";localStorage.setItem(themeKey,next);applyTheme(next)});
-      langButtons.en.addEventListener("click",()=>{localStorage.setItem(langKey,"en");renderLanguage("en")});
-      langButtons.zh.addEventListener("click",()=>{localStorage.setItem(langKey,"zh");renderLanguage("zh")});
-      const BASE=location.origin;document.getElementById("baseUrl").textContent=BASE;document.getElementById("telemetryUrl").textContent=BASE+"/api/telemetry";document.getElementById("chatUrl").textContent=BASE+"/v1/chat/completions";
-      document.querySelectorAll("[data-copy-target]").forEach(btn=>btn.addEventListener("click",async()=>{const target=document.getElementById(btn.dataset.copyTarget);if(!target) return;const original=i18n[currentLang].copy;try{await navigator.clipboard.writeText(target.textContent);btn.textContent=i18n[currentLang].copied;setTimeout(()=>btn.textContent=original,1200)}catch(_){}}));
-      document.querySelectorAll(".tab").forEach(tab=>tab.addEventListener("click",()=>{const card=tab.closest(".card");card.querySelectorAll(".tab").forEach(item=>item.classList.remove("active"));card.querySelectorAll(".tab-panel").forEach(panel=>panel.classList.remove("active"));tab.classList.add("active");card.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add("active")}));
-      const revealObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add("visible");revealObserver.unobserve(entry.target)}}),{threshold:.1});document.querySelectorAll(".reveal").forEach(item=>revealObserver.observe(item));
-      const navLinks=[...document.querySelectorAll("#manualNav a")],sections=navLinks.map(link=>document.querySelector(link.getAttribute("href")));
-      const navObserver=new IntersectionObserver(entries=>{const visible=entries.filter(entry=>entry.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(!visible) return;navLinks.forEach(link=>link.classList.toggle("active",link.getAttribute("href")==="#"+visible.target.id))},{rootMargin:"-20% 0px -60% 0px",threshold:[.12,.32,.6]});
-      sections.filter(Boolean).forEach(section=>navObserver.observe(section));
-      root.dataset.ready="true";
+      const base=location.origin;
+      document.getElementById("baseUrl").textContent=base;
+      document.getElementById("telemetryUrl").textContent=`${base}/api/telemetry`;
+      document.getElementById("chatUrl").textContent=`${base}/v1/chat/completions`;
+      document.querySelectorAll(".copy").forEach(btn=>btn.addEventListener("click",async()=>{const id=btn.getAttribute("data-copy-target");const el=document.getElementById(id);if(!el) return;const text=el.textContent.replaceAll("{{BASE}}",base);await navigator.clipboard.writeText(text);const prev=btn.textContent;btn.textContent="已复制";setTimeout(()=>btn.textContent=prev,1200)}));
+      document.querySelectorAll(".tab").forEach(tab=>tab.addEventListener("click",()=>{const name=tab.getAttribute("data-tab");document.querySelectorAll(".tab").forEach(item=>item.classList.toggle("active",item===tab));document.querySelectorAll(".tab-panel").forEach(panel=>panel.classList.toggle("active",panel.getAttribute("data-panel")===name))}));
+      const navLinks=[...document.querySelectorAll("#manualNav a")];
+      const observer=new IntersectionObserver((entries)=>{entries.forEach(entry=>{if(!entry.isIntersecting) return;navLinks.forEach(link=>link.classList.toggle("active",link.getAttribute("href")===`#${entry.target.id}`))})},{rootMargin:"-35% 0px -50% 0px",threshold:0.01});
+      document.querySelectorAll("main.sections > article").forEach(section=>observer.observe(section));
     </script>
   </body>
 </html>

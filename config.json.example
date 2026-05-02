@@ -3,12 +3,42 @@
   "token": "",
   "cookies": "",
   "tokens": [],
+  "accounts": [
+    {
+      "id": "acc-1",
+      "email": "first@example.com",
+      "cookies": "",
+      "token": "",
+      "proxy": "",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "acc-2",
+      "email": "second@example.com",
+      "cookies": "",
+      "token": "",
+      "proxy": "",
+      "enabled": true,
+      "weight": 1
+    }
+  ],
   "proxy": "",
+  "models": [
+    "gemini-3-flash",
+    "gemini-3-pro",
+    "gemini-2.5-flash"
+  ],
+  "model_aliases": {
+    "gpt-4.1": "gemini-3-pro",
+    "gpt-4o-mini": "gemini-3-flash"
+  },
   "gemini_url": "",
   "gemini_home_url": "",
   "port": 8080,
   "log_file": "",
   "log_level": "info",
+  "public_account_status": false,
   "note": [
     "Auto-generated config"
   ]

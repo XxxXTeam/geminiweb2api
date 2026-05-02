@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登录 Gemini Web 2 API</title>
+    <style>
+      *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff;color:#111827;font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif}.card{width:min(420px,calc(100% - 32px));border:1px solid #e5e7eb;border-radius:20px;padding:28px;box-shadow:0 12px 32px rgba(17,24,39,.06)}h1{margin:0;font-size:1.6rem;letter-spacing:-.03em}p{color:#6b7280;line-height:1.7}input{width:100%;min-height:46px;border:1px solid #e5e7eb;border-radius:12px;padding:0 14px;font:inherit}button{width:100%;min-height:46px;margin-top:14px;border:0;border-radius:999px;background:#111827;color:#fff;font:inherit;cursor:pointer}.err{min-height:22px;margin-top:12px;color:#b91c1c;font-size:.92rem}.brand{display:flex;gap:12px;align-items:center;margin-bottom:22px}.mark{width:38px;height:38px;border:1px solid #e5e7eb;border-radius:12px;display:grid;place-items:center;font-weight:800}
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="brand"><div class="mark">GW</div><strong>Gemini Web 2 API</strong></div>
+      <h1>输入 API Key 进入控制台</h1>
+      <p>控制台会显示账号池、Cookie、Token 等敏感信息。生产环境下必须先登录。</p>
+      <form id="loginForm">
+        <input id="apiKey" type="password" placeholder="API Key" autocomplete="current-password" autofocus />
+        <button type="submit">进入控制台</button>
+        <div class="err" id="error"></div>
+      </form>
+    </main>
+    <script>
+      document.getElementById('loginForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const error = document.getElementById('error');
+        error.textContent = '';
+        try {
+          const resp = await fetch('/api/web/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }) });
+          if (!resp.ok) throw new Error('API Key 无效');
+          location.href = '/';
+        } catch (err) {
+          error.textContent = err.message || String(err);
+        }
+      });
+    </script>
+  </body>
+</html>

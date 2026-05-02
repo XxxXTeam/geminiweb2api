@@ -5,191 +5,872 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gemini Web 2 API 控制台</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap");
       *,*::before,*::after{box-sizing:border-box}html{scroll-behavior:smooth}
-      :root{color-scheme:light;--bg:#eff4fb;--bg2:#fff;--panel:rgba(255,255,255,.82);--panel2:rgba(255,255,255,.95);--text:#152033;--soft:#56647f;--faint:#8490a6;--line:rgba(21,32,51,.1);--line2:rgba(21,32,51,.18);--accent:#2563eb;--accent2:#14b8a6;--ok:#0f9f76;--danger:#dc2626;--amber:#c2410c;--shadow:0 24px 70px rgba(15,23,42,.12);--r1:30px;--r2:22px;--r3:16px;--sans:"Noto Sans SC","Microsoft YaHei",sans-serif;--display:"Manrope",var(--sans);--mono:"JetBrains Mono",Consolas,monospace;--chart-fill:rgba(37,99,235,.12)}
-      [data-theme="dark"]{color-scheme:dark;--bg:#07101d;--bg2:#0e1728;--panel:rgba(8,16,30,.78);--panel2:rgba(11,20,36,.94);--text:#f1f5ff;--soft:rgba(241,245,255,.74);--faint:rgba(241,245,255,.46);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);--accent:#60a5fa;--accent2:#2dd4bf;--ok:#34d399;--danger:#f87171;--amber:#fbbf24;--shadow:0 32px 90px rgba(0,0,0,.34);--chart-fill:rgba(96,165,250,.16)}
-      body{margin:0;min-height:100vh;font-family:var(--sans);color:var(--text);background:radial-gradient(circle at 12% 10%,rgba(37,99,235,.16),transparent 30%),radial-gradient(circle at 88% 18%,rgba(20,184,166,.12),transparent 26%),linear-gradient(180deg,var(--bg),var(--bg2));overflow-x:hidden}
-      body[data-ready="false"]{visibility:hidden}
-      body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(132,144,166,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(132,144,166,.08) 1px,transparent 1px);background-size:36px 36px;mask-image:linear-gradient(180deg,rgba(0,0,0,.6),transparent 82%)}
-      a{color:inherit}button,a{-webkit-tap-highlight-color:transparent}:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-      .top{position:sticky;top:0;z-index:30;backdrop-filter:blur(18px);background:color-mix(in srgb,var(--panel2) 84%,transparent);border-bottom:1px solid var(--line)}
-      .top-in,.main,footer{width:min(1400px,calc(100% - 32px));margin:0 auto}
+      :root{color-scheme:light;--bg:#fff;--panel:#fff;--soft:#6b7280;--faint:#9ca3af;--text:#111827;--line:#e5e7eb;--line2:#d1d5db;--accent:#111827;--ok:#166534;--warn:#b45309;--danger:#b91c1c;--chip:#f3f4f6;--shadow:0 12px 32px rgba(17,24,39,.06);--radius:18px;--radius-sm:12px;--sans:"Inter","Noto Sans SC","Microsoft YaHei",sans-serif}
+      body{margin:0;min-height:100vh;background:var(--bg);font-family:var(--sans);color:var(--text)}
+      a{color:inherit;text-decoration:none}button,input,textarea{font:inherit}button{cursor:pointer}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#f3f4f6;padding:.12rem .38rem;border-radius:8px}
+      :focus-visible{outline:2px solid #111827;outline-offset:2px}
+      .shell{width:min(1280px,calc(100% - 32px));margin:0 auto}
+      .top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
       .top-in{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-      .brand{display:flex;align-items:center;gap:14px}.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 16px 36px rgba(37,99,235,.28);position:relative}.logo::after{content:"";position:absolute;inset:9px;border-radius:10px;border:1px solid rgba(255,255,255,.34)}
-      .brand strong{display:block;font:800 1rem/1 var(--display);letter-spacing:.02em}.brand span{display:block;margin-top:4px;color:var(--soft);font-size:.9rem}
-      .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-      .btn,.chip{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:color-mix(in srgb,var(--panel) 88%,transparent);display:inline-flex;align-items:center;gap:10px;font:600 .94rem/1 var(--sans);text-decoration:none}
-      .btn{cursor:pointer;color:var(--text);transition:transform .16s,border-color .16s}.btn:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 45%,var(--line2))}
-      .chip{color:var(--soft)}.dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 6px color-mix(in srgb,var(--amber) 18%,transparent)}.chip.ok .dot{background:var(--ok);box-shadow:0 0 0 6px color-mix(in srgb,var(--ok) 18%,transparent)}.chip.err .dot{background:var(--danger);box-shadow:0 0 0 6px color-mix(in srgb,var(--danger) 18%,transparent)}
-      .main{position:relative;z-index:1;padding:28px 0 52px}
-      .hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:18px;margin-bottom:18px}
-      .panel{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:var(--r1)}
-      .hero-main,.hero-side,.kpi,.spark,.table,.notes,.health{padding:24px}
-      .hero-main{position:relative;overflow:hidden;background-image:linear-gradient(135deg,color-mix(in srgb,var(--accent) 16%,transparent),color-mix(in srgb,var(--accent2) 12%,transparent))}
-      .hero-main::after{content:"";position:absolute;right:-70px;top:-40px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.24),transparent 68%)}
-      .eyebrow,.tag{display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:rgba(255,255,255,.08);color:var(--soft);font-size:.86rem}
-      .hero h1{margin:18px 0 10px;font:800 clamp(2.1rem,4vw,4rem)/1 var(--display);letter-spacing:-.05em;max-width:11ch}
-      .hero p{margin:0;color:var(--soft);font-size:1rem;line-height:1.78;max-width:60ch}
+      .brand{display:flex;align-items:center;gap:14px}.mark{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);display:grid;place-items:center;font-weight:800;letter-spacing:.04em}.brand strong{display:block;font-size:1rem}.brand span{display:block;margin-top:4px;color:var(--soft);font-size:.92rem}
+      .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+      .btn,.pill{min-height:40px;padding:0 14px;border:1px solid var(--line);background:#fff;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:8px}.btn:hover{border-color:var(--line2);background:#fafafa}.btn.primary{background:#111827;color:#fff;border-color:#111827}.btn.danger{color:var(--danger)}.pill{background:var(--chip);color:var(--soft);cursor:default}
+      .main{padding:28px 0 40px}
+      .hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr);gap:18px;margin-bottom:18px}
+      .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+      .hero-main,.hero-side,.section{padding:24px}
+      h1{margin:0;font-size:clamp(2rem,4vw,3.2rem);line-height:1.02;letter-spacing:-.04em;max-width:10ch}
+      .lead{margin:14px 0 0;color:var(--soft);font-size:1rem;line-height:1.8;max-width:60ch}
       .hero-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:22px}
-      .hero-stat,.side-box,.metric,.endpoint,.note-box{border-radius:20px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel2) 95%,transparent)}
-      .hero-stat,.side-box,.metric,.endpoint,.note-box{padding:18px}
-      .hero-stat strong,.side-box strong,.metric .label,.table h2,.notes h2,.health h2{display:block}
-      .hero-stat strong{font-size:.86rem;color:var(--soft)}.hero-stat span{display:block;margin-top:8px;font:700 1.2rem/1.2 var(--display)}
-      .hero-side{display:grid;gap:14px}
-      .subgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px}
-      .kpi{grid-column:span 8}.spark{grid-column:span 4}.table{grid-column:span 4}.health{grid-column:span 3}.notes{grid-column:span 5}
-      .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-      .metric{min-height:154px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
-      .metric::after{content:"";position:absolute;right:-18px;bottom:-18px;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 16%,transparent),transparent 68%)}
-      .label{font-size:.84rem;color:var(--soft);letter-spacing:.04em;text-transform:uppercase}
-      .value{font:800 clamp(1.9rem,3vw,3rem)/1 var(--mono);letter-spacing:-.04em}
-      .sub{font-size:.9rem;color:var(--faint)}
-      .metric.ok .value{color:var(--ok)}.metric.fail .value{color:var(--danger)}.metric.accent .value{color:var(--accent)}.metric.teal .value{color:var(--accent2)}
-      .spark h2,.table h2,.notes h2,.health h2{margin:0 0 14px;font:800 1.08rem/1.2 var(--display)}
-      .spark-top,.table-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-      .spark-top span,.table-top span{color:var(--soft);font-size:.92rem}
-      .spark-frame{height:230px;border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg,color-mix(in srgb,var(--panel2) 94%,transparent),transparent);padding:16px;position:relative;overflow:hidden}
-      .spark-grid{position:absolute;inset:16px;background-image:linear-gradient(rgba(132,144,166,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(132,144,166,.08) 1px,transparent 1px);background-size:100% 25%,16.666% 100%;border-radius:18px}
-      svg{position:relative;z-index:1;width:100%;height:100%}.spark-fill{fill:var(--chart-fill)}.spark-line{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-      .ring{width:188px;height:188px;margin:8px auto 20px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--ok) calc(var(--pct)*1%),color-mix(in srgb,var(--danger) 76%,transparent) 0);position:relative}
-      .ring::after{content:"";position:absolute;inset:18px;border-radius:50%;background:color-mix(in srgb,var(--panel2) 96%,transparent);border:1px solid var(--line)}
-      .ring-inner{position:relative;z-index:1;text-align:center}.ring-inner strong{display:block;font:800 2rem/1 var(--display)}.ring-inner span{display:block;margin-top:8px;color:var(--soft);font-size:.92rem}
-      .endpoint-list,.status-list,.notes-list{display:grid;gap:12px}
-      .endpoint strong,.note-box strong{font-size:.94rem}.endpoint span,.status-list li,.notes-list li,.note-box span{display:block;color:var(--soft);font-size:.94rem;line-height:1.7}
-      .status-list,.notes-list{margin:0;padding:0;list-style:none}
-      .status-list li,.notes-list li{padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel2) 95%,transparent)}
-      footer{padding:0 0 34px;color:var(--faint);font-size:.92rem}
-      .reveal{opacity:0;transform:translateY(18px);transition:opacity .42s,transform .42s}.reveal.visible{opacity:1;transform:translateY(0)}
-      @media(max-width:1180px){.hero{grid-template-columns:1fr}.subgrid{grid-template-columns:1fr}.kpi,.spark,.table,.health,.notes{grid-column:auto}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:760px){.top-in{padding:10px 0;align-items:flex-start;flex-direction:column}.top-in,.main,footer{width:min(1400px,calc(100% - 20px))}.hero-main,.hero-side,.kpi,.spark,.table,.notes,.health{padding:18px}.hero-stats,.metrics{grid-template-columns:1fr}.ring{width:160px;height:160px}}
+      .mini{padding:16px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff}.mini strong{display:block;font-size:.85rem;color:var(--soft);font-weight:600}.mini span{display:block;margin-top:10px;font-size:1.1rem;font-weight:700;word-break:break-all}
+      .hero-side{display:grid;gap:12px;align-content:start}.hero-note{padding:18px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fafafa}.hero-note strong{display:block;font-size:.94rem}.hero-note span{display:block;margin-top:8px;color:var(--soft);line-height:1.75}
+      .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px}.span-7{grid-column:span 7}.span-5{grid-column:span 5}.span-8{grid-column:span 8}.span-4{grid-column:span 4}.span-12{grid-column:span 12}
+      .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.section-head h2{margin:0;font-size:1.08rem}.section-head p{margin:6px 0 0;color:var(--soft);line-height:1.7}
+      .stats,.pool-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{padding:18px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff}.stat .k{display:block;font-size:.84rem;color:var(--soft);text-transform:uppercase;letter-spacing:.04em;background:none;padding:0}.stat .v{display:block;margin-top:10px;font-size:1.8rem;font-weight:800;letter-spacing:-.04em}.stat .s{display:block;margin-top:8px;color:var(--soft);font-size:.92rem}
+      .stat.ok .v{color:var(--ok)}.stat.fail .v{color:var(--danger)}
+      .two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+      .list,.bindings{display:grid;gap:10px}.item{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fff}.item strong{display:block;font-size:.95rem}.item span{display:block;margin-top:6px;color:var(--soft);line-height:1.7}.item-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.toolbar input,.toolbar select{flex:1;min-width:180px;min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+      .account-table{display:grid;gap:12px}
+      .account{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff;transition:border-color .18s,box-shadow .18s,background .18s}.account.active{border-color:#111827;box-shadow:0 0 0 1px #111827, var(--shadow);background:#fcfcfc}.account-top,.account-meta,.account-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.account-top strong{font-size:1rem}.account-top span,.account-meta span{color:var(--soft);font-size:.92rem}.account-meta{margin-top:10px}.tags{display:flex;gap:8px;flex-wrap:wrap}.tag{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:999px;background:#f3f4f6;color:#374151;font-size:.84rem}.tag.ok{background:#ecfdf5;color:#166534}.tag.warn{background:#fff7ed;color:#b45309}.tag.danger{background:#fef2f2;color:#b91c1c}.cookie-health{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafafa;display:grid;gap:8px}.cookie-health strong{font-size:.9rem}.cookie-health span{color:var(--soft);font-size:.88rem;line-height:1.6}.cookie-health.ok{background:#f7fef9;border-color:#bbf7d0}.cookie-health.warn{background:#fffaf0;border-color:#fed7aa}.failures{margin-top:12px;display:grid;gap:8px}.failure{padding:10px 12px;border-radius:12px;background:#fafafa;border:1px solid var(--line)}.failure strong{font-size:.82rem;color:var(--danger)}.failure span{display:block;margin-top:4px;color:var(--soft);font-size:.88rem;line-height:1.6}
+      .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:grid;gap:8px}.field label{font-size:.9rem;font-weight:600}.field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;color:var(--text)}.field textarea{min-height:116px;resize:vertical}.field.full{grid-column:1/-1}
+      .cookie-builder{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafafa}.cookie-builder summary{cursor:pointer;font-weight:700}.cookie-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}.cookie-grid input{width:100%;min-height:40px;border:1px solid var(--line);border-radius:12px;padding:0 10px;background:#fff}.helper{display:block;color:var(--soft);font-size:.86rem;line-height:1.6}
+      .checkbox{display:flex;align-items:center;gap:10px;color:var(--soft)}.checkbox input{width:16px;height:16px}
+      .muted{color:var(--soft)}.danger-text{color:var(--danger)}.ok-text{color:var(--ok)}.control-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.switch{display:inline-flex;align-items:center;gap:8px;color:var(--soft);font-size:.92rem}.switch input{width:16px;height:16px}.status-dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}.status-dot.paused{background:var(--warn)}.status-dot.off{background:var(--danger)}
+      .empty{padding:18px;border:1px dashed var(--line2);border-radius:14px;color:var(--soft);background:#fafafa}
+      .incident-list{display:grid;gap:10px}.incident{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;transition:border-color .18s,background .18s}.incident:hover{border-color:var(--line2);background:#fafafa}.incident strong{display:block;font-size:.92rem;color:var(--danger)}.incident span{display:block;margin-top:6px;color:var(--soft);line-height:1.65}.incident code{word-break:break-all}
+      .drawer-backdrop{position:fixed;inset:0;background:rgba(17,24,39,.12);backdrop-filter:blur(4px);z-index:45;opacity:0;pointer-events:none;transition:opacity .18s}.drawer-backdrop.open{opacity:1;pointer-events:auto}.drawer{position:fixed;top:0;right:0;height:100vh;width:min(460px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-18px 0 50px rgba(17,24,39,.08);z-index:46;transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column}.drawer.open{transform:translateX(0)}.drawer-head{padding:20px 20px 16px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.drawer-head h3{margin:0;font-size:1.1rem}.drawer-head p{margin:6px 0 0;color:var(--soft);line-height:1.7}.drawer-body{padding:18px 20px 24px;overflow:auto;display:grid;gap:14px}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.detail{padding:14px;border:1px solid var(--line);border-radius:14px;background:#fafafa}.detail strong{display:block;font-size:.84rem;color:var(--soft)}.detail span{display:block;margin-top:8px;font-size:.96rem;line-height:1.7;word-break:break-all}.detail.full{grid-column:1/-1}.timeline{display:grid;gap:10px}.timeline-item{padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff}.timeline-item strong{display:block;font-size:.9rem;color:var(--danger)}.timeline-item span{display:block;margin-top:6px;color:var(--soft);line-height:1.65}
+      .modal-backdrop{position:fixed;inset:0;background:rgba(17,24,39,.18);backdrop-filter:blur(4px);z-index:55;display:none;align-items:center;justify-content:center;padding:20px}.modal-backdrop.open{display:flex}.modal{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 22px;border-bottom:1px solid var(--line)}.modal-head h3{margin:0}.modal-head p{margin:6px 0 0;color:var(--soft)}.modal-body{padding:20px 22px;display:grid;gap:14px}.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:0 22px 22px}.modal textarea{min-height:160px}
+      .toast-wrap{position:fixed;right:20px;bottom:20px;z-index:40;display:grid;gap:10px}.toast{min-width:260px;max-width:360px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow);opacity:0;transform:translateY(8px);animation:toast-in .18s ease forwards}.toast.ok{border-color:#bbf7d0}.toast.err{border-color:#fecaca}.toast strong{display:block;font-size:.92rem}.toast span{display:block;margin-top:6px;color:var(--soft);font-size:.9rem;line-height:1.6}.footer{padding:0 0 30px;color:var(--faint);font-size:.9rem}
+      @keyframes toast-in{to{opacity:1;transform:translateY(0)}}
+      @media(max-width:1100px){.hero,.two-col{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.span-7,.span-5,.span-8,.span-4{grid-column:span 12}}
+      @media(max-width:720px){.shell{width:min(1280px,calc(100% - 20px))}.top-in{align-items:flex-start;flex-direction:column;padding:10px 0}.hero-main,.hero-side,.section{padding:18px}.hero-stats,.stats,.form-grid{grid-template-columns:1fr}}
     </style>
   </head>
-  <body data-theme="light" data-ready="false">
+  <body>
     <header class="top">
-      <div class="top-in">
+      <div class="shell top-in">
         <div class="brand">
-          <div class="logo" aria-hidden="true"></div>
+          <div class="mark" aria-hidden="true">GW</div>
           <div>
             <strong>Gemini Web 2 API</strong>
-            <span>数据展示大屏 · 实时运行控制台</span>
           </div>
         </div>
-        <div class="actions">
-          <button class="btn" id="langEn" type="button" aria-label="Switch to English">EN</button>
-          <button class="btn" id="langZh" type="button" aria-label="切换到中文">中文</button>
-          <button class="btn" id="themeToggle" type="button" aria-label="切换主题">切换到暗色</button>
-          <a class="btn" href="/help">查看使用手册</a>
-          <div class="chip" id="chip"><span class="dot"></span><span id="chipText">连接中</span></div>
+        <div class="top-actions">
+          <button class="btn" id="langEn" type="button">EN</button>
+          <button class="btn" id="langZh" type="button">中文</button>
+          <a class="btn" href="/help">使用手册</a>
+          <span class="pill" id="serviceState">读取中</span>
         </div>
       </div>
     </header>
 
-    <main class="main">
+    <main class="shell main">
       <section class="hero">
-        <div class="hero-main panel reveal">
-          <span class="eyebrow">Realtime Operations</span>
-          <h1>把请求、稳定性和吞吐集中到一个视图里</h1>
-          <p>首页重构为更偏大屏的数据控制台，重点不是“看起来像 AI 报告”，而是让部署者一眼看到服务健康度、请求趋势、成功率与 token 消耗。</p>
+        <div class="hero-main card">
+          <h1 id="heroTitle">服务和号池</h1>
           <div class="hero-stats">
-            <div class="hero-stat"><strong>当前状态</strong><span id="heroStatus">等待数据</span></div>
-            <div class="hero-stat"><strong>最后刷新</strong><span id="lastUpdated">--:--:--</span></div>
-            <div class="hero-stat"><strong>Base URL</strong><span id="baseUrl">--</span></div>
+            <div class="mini"><strong id="labelStatus">服务状态</strong><span id="heroStatus">--</span></div>
+            <div class="mini"><strong id="labelRefresh">最后刷新</strong><span id="lastUpdated">--</span></div>
+            <div class="mini"><strong>Base URL</strong><span id="baseUrl">--</span></div>
           </div>
         </div>
-        <aside class="hero-side reveal">
-          <div class="side-box panel"><strong>运行摘要</strong><span id="summaryText">正在读取遥测数据，用于生成实时概览。</span></div>
-          <div class="side-box panel"><strong>负载等级</strong><span id="loadText">等待样本</span></div>
-          <div class="side-box panel"><strong>主要入口</strong><span><code>/api/telemetry</code> · <code>/v1/models</code> · <code>/v1/chat/completions</code></span></div>
+        <aside class="hero-side card">
+          <div class="hero-note">
+            <strong id="summaryTitle">运行摘要</strong>
+            <span id="summaryText">正在读取遥测与账号池信息。</span>
+          </div>
+          <div class="hero-note">
+            <strong id="authTitle">管理认证</strong>
+            <span id="authDesc">输入管理用 API Key 后，页面会调用账号池接口进行增删改查和刷新操作。</span>
+          </div>
+          <div class="toolbar">
+            <input id="apiKeyInput" type="password" placeholder="输入 API Key" autocomplete="off" />
+            <button class="btn" id="toggleApiKey" type="button">显示</button>
+            <button class="btn primary" id="saveApiKey" type="button">保存</button>
+          </div>
         </aside>
       </section>
 
-      <section class="subgrid">
-        <div class="kpi panel reveal">
-          <div class="table-top"><h2>核心指标</h2><span>用于值守时快速判断系统状态</span></div>
-          <div class="metrics">
-            <article class="metric accent"><div class="label">运行时长</div><div class="value" id="uptime">--</div><div class="sub">服务在线时长</div></article>
-            <article class="metric accent"><div class="label">RPM</div><div class="value" id="rpm">--</div><div class="sub">每分钟请求数</div></article>
-            <article class="metric"><div class="label">总请求数</div><div class="value" id="total">--</div><div class="sub">累计处理量</div></article>
-            <article class="metric ok"><div class="label">成功请求</div><div class="value" id="ok">--</div><div class="sub" id="successPct">成功率 --</div></article>
-            <article class="metric fail"><div class="label">失败请求</div><div class="value" id="fail">--</div><div class="sub" id="failPct">失败率 --</div></article>
-            <article class="metric teal"><div class="label">输入 Token</div><div class="value" id="inpTok">--</div><div class="sub">累计输入消耗</div></article>
-            <article class="metric teal"><div class="label">输出 Token</div><div class="value" id="outTok">--</div><div class="sub">累计输出消耗</div></article>
-            <article class="metric"><div class="label">均次 Token</div><div class="value" id="avgTok">--</div><div class="sub">总 token / 总请求</div></article>
+      <section class="grid">
+        <section class="section card span-7">
+          <div class="section-head">
+            <div>
+              <h2 id="statsTitle">运行指标</h2>
+            </div>
+            <div class="control-row">
+              <span class="pill"><span class="status-dot" id="refreshDot"></span><span id="refreshStatusText">自动刷新中</span></span>
+              <select id="refreshIntervalSelect">
+                <option value="15000">15s</option>
+                <option value="30000">30s</option>
+                <option value="60000">60s</option>
+                <option value="300000">5min</option>
+              </select>
+              <label class="switch"><input id="autoRefreshToggle" type="checkbox" checked /> <span id="autoRefreshLabel">自动刷新</span></label>
+              <button class="btn" id="refreshAll" type="button">立即刷新</button>
+            </div>
           </div>
-        </div>
-
-        <div class="spark panel reveal">
-          <div class="spark-top"><h2>流量趋势</h2><span id="rpmLabel">-- rpm</span></div>
-          <div class="spark-frame">
-            <div class="spark-grid"></div>
-            <svg viewBox="0 0 640 230" preserveAspectRatio="none">
-              <path class="spark-fill" id="sparkFill" d=""></path>
-              <path class="spark-line" id="sparkLine" d=""></path>
-            </svg>
+          <div class="stats">
+            <div class="stat"><span class="k" id="uptimeLabel">运行时长</span><span class="v" id="uptime">--</span><span class="s" id="uptimeSub">服务在线时长</span></div>
+            <div class="stat"><span class="k">RPM</span><span class="v" id="rpm">--</span><span class="s" id="rpmSub">每分钟请求数</span></div>
+            <div class="stat"><span class="k" id="totalLabel">总请求数</span><span class="v" id="total">--</span><span class="s" id="totalSub">累计处理量</span></div>
+            <div class="stat ok"><span class="k" id="successLabel">成功请求</span><span class="v" id="ok">--</span><span class="s" id="successPct">--</span></div>
+            <div class="stat fail"><span class="k" id="failLabel">失败请求</span><span class="v" id="fail">--</span><span class="s" id="failPct">--</span></div>
+            <div class="stat"><span class="k" id="inputLabel">输入 Token</span><span class="v" id="inpTok">--</span><span class="s" id="inputSub">累计输入</span></div>
+            <div class="stat"><span class="k" id="outputLabel">输出 Token</span><span class="v" id="outTok">--</span><span class="s" id="outputSub">累计输出</span></div>
+            <div class="stat"><span class="k" id="avgLabel">均次 Token</span><span class="v" id="avgTok">--</span><span class="s" id="avgSub">总 token / 总请求</span></div>
           </div>
-        </div>
+        </section>
 
-        <div class="table panel reveal">
-          <div class="table-top"><h2>接口面板</h2><span>面向接入方的关键入口</span></div>
-          <div class="endpoint-list">
-            <div class="endpoint"><strong>GET /api/telemetry</strong><span>当前页和手册页都会依赖这个接口获取实时状态。</span></div>
-            <div class="endpoint"><strong>GET /v1/models</strong><span>适合 SDK 初始化、探活或对接侧做能力发现。</span></div>
-            <div class="endpoint"><strong>POST /v1/chat/completions</strong><span>OpenAI 兼容聊天入口，支持普通响应与流式返回。</span></div>
+        <section class="section card span-5">
+          <div class="section-head">
+            <div>
+              <h2 id="poolStatsTitle">号池健康</h2>
+            </div>
+            <div class="toolbar">
+              <button class="btn" id="exportPoolBtn" type="button">导出号池</button>
+              <button class="btn" id="refreshAllAccounts" type="button">刷新全部账号</button>
+            </div>
           </div>
-        </div>
-
-        <div class="health panel reveal">
-          <h2>稳定性总览</h2>
-          <div class="ring" id="ring" style="--pct:0">
-            <div class="ring-inner"><strong id="ringValue">0%</strong><span>成功率</span></div>
+          <div class="pool-stats">
+            <div class="stat"><span class="k" id="poolTotalLabel">总账号</span><span class="v" id="poolTotal">--</span><span class="s" id="poolTotalSub">已载入账号</span></div>
+            <div class="stat ok"><span class="k" id="poolHealthyLabel">健康账号</span><span class="v" id="poolHealthy">--</span><span class="s" id="poolHealthySub">当前可分配</span></div>
+            <div class="stat"><span class="k" id="poolBackoffLabel">未就绪</span><span class="v" id="poolBackoff">--</span><span class="s" id="poolBackoffSub">需更新登录态</span></div>
+            <div class="stat fail"><span class="k" id="poolDisabledLabel">禁用账号</span><span class="v" id="poolDisabled">--</span><span class="s" id="poolDisabledSub">人工停用</span></div>
           </div>
-          <ul class="status-list">
-            <li id="stateLine">状态：等待数据</li>
-            <li id="refreshLine">刷新：每 5 秒拉取一次遥测</li>
-            <li id="sessionLine">建议：多轮会话固定使用 X-Session-ID</li>
-          </ul>
-        </div>
+        </section>
 
-        <div class="notes panel reveal">
-          <div class="table-top"><h2>运行备注</h2><span>来自配置中的 note 字段</span></div>
-          <div class="note-box"><strong>摘要</strong><span id="noteSummary">正在等待说明信息。</span></div>
-          <ul class="notes-list" id="notesList">
-            <li>Loading...</li>
-          </ul>
-        </div>
+        <section class="section card span-5">
+          <div class="section-head">
+            <div>
+              <h2 id="bindingTitle">会话绑定</h2>
+            </div>
+          </div>
+          <div class="toolbar" style="margin-bottom:12px">
+            <input id="rebindSessionKey" type="text" placeholder="输入会话 ID" />
+            <select id="rebindAccountSelect"></select>
+            <button class="btn" id="rebindSessionBtn" type="button">迁移绑定</button>
+          </div>
+          <div class="bindings" id="bindingsList">
+            <div class="empty" id="bindingsEmpty">当前还没有活跃绑定。</div>
+          </div>
+        </section>
+
+        <section class="section card span-8">
+          <div class="section-head">
+            <div>
+              <h2 id="accountsTitle">账号池</h2>
+            </div>
+            <div class="toolbar" style="min-width:260px">
+              <input id="accountSearch" type="search" placeholder="搜索账号 ID 或邮箱" />
+            </div>
+          </div>
+          <div class="account-table" id="accountList">
+            <div class="empty" id="accountsEmpty">正在读取账号列表。</div>
+          </div>
+        </section>
+
+        <section class="section card span-4">
+          <div class="section-head">
+            <div>
+              <h2 id="editorTitle">新增 / 编辑账号</h2>
+            </div>
+          </div>
+          <form id="accountForm">
+            <div class="form-grid">
+              <div class="field">
+                <label for="accountId">账号 ID</label>
+                <input id="accountId" name="id" placeholder="例如 acc-1" required />
+              </div>
+              <div class="field">
+                <label for="accountEmail">邮箱</label>
+                <input id="accountEmail" name="email" placeholder="例如 first@example.com" />
+              </div>
+              <div class="field">
+                <label for="accountWeight">权重</label>
+                <input id="accountWeight" name="weight" type="number" min="1" value="1" />
+              </div>
+              <div class="field">
+                <label for="accountToken">手动 Token</label>
+                <input id="accountToken" name="token" type="password" placeholder="可选" autocomplete="off" />
+              </div>
+              <div class="field full">
+                <label for="accountProxy">账号代理</label>
+                <input id="accountProxy" name="proxy" placeholder="可选，不填则走全局代理/本机网络" autocomplete="off" />
+              </div>
+              <div class="field full">
+                <label for="accountCookies">Cookies</label>
+                <textarea id="accountCookies" name="cookies" placeholder="可选，建议登录态场景填写"></textarea>
+              </div>
+              <div class="field full">
+                <details class="cookie-builder" id="cookieBuilder">
+                  <summary id="cookieBuilderTitle">常用 Gemini Cookie 拼接</summary>
+                  <span class="helper" id="cookieBuilderHint">可粘贴单个 Cookie 值，页面会自动拼成完整 Cookie 字符串。</span>
+                  <textarea id="cookieTableInput" placeholder="也可以粘贴 DevTools Cookie 表格多行，例如：NID    530=..." style="min-height:88px"></textarea>
+                  <div class="cookie-grid">
+                    <input id="cookie1PSID" placeholder="__Secure-1PSID" autocomplete="off" />
+                    <input id="cookie1PAPISID" placeholder="__Secure-1PAPISID" autocomplete="off" />
+                    <input id="cookie1PSIDTS" placeholder="__Secure-1PSIDTS" autocomplete="off" />
+                    <input id="cookie1PSIDCC" placeholder="__Secure-1PSIDCC" autocomplete="off" />
+                    <input id="cookieNID" placeholder="NID" autocomplete="off" />
+                  </div>
+                  <div class="toolbar" style="margin-top:10px">
+                    <button class="btn" type="button" id="parseCookieTableBtn">解析表格</button>
+                    <button class="btn" type="button" id="buildCookiesBtn">生成 Cookie</button>
+                    <button class="btn" type="button" id="clearCookiePartsBtn">清空分项</button>
+                  </div>
+                </details>
+              </div>
+              <div class="field full">
+                <label class="checkbox"><input id="accountEnabled" name="enabled" type="checkbox" checked /> <span id="enabledText">账号启用</span></label>
+              </div>
+            </div>
+            <div class="toolbar" style="margin-top:14px">
+              <button class="btn primary" type="submit" id="saveAccountBtn">保存账号</button>
+              <button class="btn" type="button" id="resetFormBtn">清空表单</button>
+              <button class="btn" type="button" id="toggleTokenBtn">显示 Token</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="section card span-12">
+          <div class="section-head">
+            <div>
+              <h2 id="incidentTitle">最近异常</h2>
+            </div>
+            <button class="btn" id="exportIncidentsBtn" type="button">导出异常</button>
+          </div>
+          <div class="incident-list" id="incidentList">
+            <div class="empty" id="incidentEmpty">当前没有异常记录。</div>
+          </div>
+        </section>
       </section>
     </main>
 
-    <footer>Gemini Web 2 API · Dashboard / Help 双视图 · 亮暗主题持久化</footer>
+    <footer class="shell footer">Gemini Web 2 API</footer>
+    <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+    <div class="modal-backdrop" id="editModalBackdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="editModalTitle">编辑账号凭证</h3>
+            <p id="editModalHint">此弹窗会显示敏感字段，仅在输入 API Key 后可打开。</p>
+          </div>
+          <button class="btn" type="button" id="closeEditModalBtn">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field"><label for="editAccountId">账号 ID</label><input id="editAccountId" /></div>
+            <div class="field"><label for="editAccountEmail">邮箱</label><input id="editAccountEmail" /></div>
+            <div class="field"><label for="editAccountWeight">权重</label><input id="editAccountWeight" type="number" min="1" /></div>
+            <div class="field"><label for="editAccountProxy">账号代理</label><input id="editAccountProxy" /></div>
+            <div class="field full"><label for="editAccountToken">手动 Token</label><input id="editAccountToken" type="password" autocomplete="off" /></div>
+            <div class="field full"><label for="editAccountCookies">Cookies</label><textarea id="editAccountCookies"></textarea></div>
+            <div class="field full"><label class="checkbox"><input id="editAccountEnabled" type="checkbox" /> <span id="editEnabledText">账号启用</span></label></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" type="button" id="toggleEditTokenBtn">显示 Token</button>
+          <button class="btn" type="button" id="closeEditModalBtn2">取消</button>
+          <button class="btn primary" type="button" id="saveEditAccountBtn">保存修复</button>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <aside class="drawer" id="accountDrawer" aria-hidden="true">
+      <div class="drawer-head">
+        <div>
+          <h3 id="drawerTitle">账号详情</h3>
+        </div>
+        <button class="btn" id="closeDrawerBtn" type="button">关闭</button>
+      </div>
+      <div class="drawer-body">
+        <div class="detail-grid" id="drawerDetails"></div>
+        <div>
+          <strong id="drawerTimelineTitle">最近失败</strong>
+          <div class="timeline" id="drawerTimeline"></div>
+        </div>
+      </div>
+    </aside>
 
     <script>
-      const root=document.body,themeToggle=document.getElementById("themeToggle"),themeKey="gemini-ui-theme",langKey="gemini-ui-lang",prefersDark=window.matchMedia("(prefers-color-scheme: dark)");
-      const langButtons={en:document.getElementById("langEn"),zh:document.getElementById("langZh")};
-      let currentLang=localStorage.getItem(langKey)||"en";
-      function applyTheme(theme){root.setAttribute("data-theme",theme);themeToggle.textContent=theme==="dark"?(currentLang==="zh"?"切换到亮色":"Switch to Light"):(currentLang==="zh"?"切换到暗色":"Switch to Dark")}
-      applyTheme(localStorage.getItem(themeKey)||(prefersDark.matches?"dark":"light"));
-      const copy={
-        en:{title:"Gemini Web 2 API Dashboard",htmlLang:"en",staticTexts:[[".brand span","Data Wall · Real-time Operations Console"],[".actions a","Open Manual"],[".hero-main h1","One view for traffic, stability, and throughput"],[".hero-main p","The homepage now behaves like a monitoring wall instead of an AI-style report. Operators can scan health, trend lines, success rate, and token usage at a glance."],[".hero-stat:nth-child(1) strong","Current State"],[".hero-stat:nth-child(2) strong","Last Refresh"],[".hero-stat:nth-child(3) strong","Base URL"],[".side-box:nth-child(1) strong","Runtime Summary"],[".side-box:nth-child(1) span","Reading telemetry data to build a live overview."],[".side-box:nth-child(2) strong","Load Level"],[".side-box:nth-child(2) span","Waiting for samples"],[".side-box:nth-child(3) strong","Primary Endpoints"],[".table-top h2","Core Metrics"],[".kpi .table-top span","Designed for quick operator judgement"],[".metric:nth-child(1) .label","Uptime"],[".metric:nth-child(1) .sub","time online"],[".metric:nth-child(2) .label","RPM"],[".metric:nth-child(2) .sub","requests per minute"],[".metric:nth-child(3) .label","Total Requests"],[".metric:nth-child(3) .sub","lifetime volume"],[".metric:nth-child(4) .label","Succeeded"],[".metric:nth-child(5) .label","Failed"],[".metric:nth-child(6) .label","Input Tokens"],[".metric:nth-child(6) .sub","cumulative input"],[".metric:nth-child(7) .label","Output Tokens"],[".metric:nth-child(7) .sub","cumulative output"],[".metric:nth-child(8) .label","Avg Tokens"],[".metric:nth-child(8) .sub","total tokens / total requests"],[".spark-top h2","Traffic Trend"],[".table.panel .table-top h2","Endpoint Panel"],[".table.panel .table-top span","The most important entry points for clients"],[".endpoint:nth-child(1) span","Both the dashboard and the manual rely on this endpoint for live state."],[".endpoint:nth-child(2) span","Useful for SDK discovery, probing, or health checks."],[".endpoint:nth-child(3) span","Primary OpenAI-compatible chat endpoint with standard and streaming modes."],[".health h2","Stability Overview"],[".ring-inner span","success rate"],["#refreshLine","Refresh: telemetry is fetched every 5 seconds"],["#sessionLine","Tip: keep X-Session-ID stable for multi-turn sessions"],[".notes .table-top h2","Runtime Notes"],[".notes .table-top span","Read from the note field in config"],[".note-box strong","Summary"],["footer","Gemini Web 2 API · Dashboard / Help dual view · theme and language persistence"]],status:{connecting:"Connecting",online:"Online",offline:"Offline",running:"Running",unknown:"Unknown",summary:(total,rpm)=>`Processed ${total} requests in total, with ${rpm} rpm over the last minute.`,loadHigh:"High load. Watch proxy quality and failure rate.",loadMid:"Moderate load. Service is under steady use.",loadLow:"Low load. Good for validation or idle-time checks.",stateOnline:"State: online and responding",stateUnknown:"State: state unknown",stateError:"State: telemetry unavailable",sessionWarn:"Tip: check failed requests and proxy stability first",sessionGood:"Tip: current success rate looks stable",noteEmpty:"No notes available",success:(v)=>`Success ${v}%`,fail:(v)=>`Failure ${v}%`,refresh:(v)=>`Refresh: ${v}`}},
-        zh:{title:"Gemini Web 2 API 控制台",htmlLang:"zh-CN",staticTexts:[[".brand span","数据展示大屏 · 实时运行控制台"],[".actions a","查看使用手册"],[".hero-main h1","把请求、稳定性和吞吐集中到一个视图里"],[".hero-main p","首页重构为更偏大屏的数据控制台，重点不是“看起来像 AI 报告”，而是让部署者一眼看到服务健康度、请求趋势、成功率与 token 消耗。"],[".hero-stat:nth-child(1) strong","当前状态"],[".hero-stat:nth-child(2) strong","最后刷新"],[".hero-stat:nth-child(3) strong","Base URL"],[".side-box:nth-child(1) strong","运行摘要"],[".side-box:nth-child(1) span","正在读取遥测数据，用于生成实时概览。"],[".side-box:nth-child(2) strong","负载等级"],[".side-box:nth-child(2) span","等待样本"],[".side-box:nth-child(3) strong","主要入口"],[".table-top h2","核心指标"],[".kpi .table-top span","用于值守时快速判断系统状态"],[".metric:nth-child(1) .label","运行时长"],[".metric:nth-child(1) .sub","服务在线时长"],[".metric:nth-child(2) .label","RPM"],[".metric:nth-child(2) .sub","每分钟请求数"],[".metric:nth-child(3) .label","总请求数"],[".metric:nth-child(3) .sub","累计处理量"],[".metric:nth-child(4) .label","成功请求"],[".metric:nth-child(5) .label","失败请求"],[".metric:nth-child(6) .label","输入 Token"],[".metric:nth-child(6) .sub","累计输入消耗"],[".metric:nth-child(7) .label","输出 Token"],[".metric:nth-child(7) .sub","累计输出消耗"],[".metric:nth-child(8) .label","均次 Token"],[".metric:nth-child(8) .sub","总 token / 总请求"],[".spark-top h2","流量趋势"],[".table.panel .table-top h2","接口面板"],[".table.panel .table-top span","面向接入方的关键入口"],[".endpoint:nth-child(1) span","当前页和手册页都会依赖这个接口获取实时状态。"],[".endpoint:nth-child(2) span","适合 SDK 初始化、探活或对接侧做能力发现。"],[".endpoint:nth-child(3) span","OpenAI 兼容聊天入口，支持普通响应与流式返回。"],[".health h2","稳定性总览"],[".ring-inner span","成功率"],["#refreshLine","刷新：每 5 秒拉取一次遥测"],["#sessionLine","建议：多轮会话固定使用 X-Session-ID"],[".notes .table-top h2","运行备注"],[".notes .table-top span","来自配置中的 note 字段"],[".note-box strong","摘要"],["footer","Gemini Web 2 API · Dashboard / Help 双视图 · 亮暗主题与语言持久化"]],status:{connecting:"连接中",online:"服务在线",offline:"连接失败",running:"运行中",unknown:"未知",summary:(total,rpm)=>`当前已累计处理 ${total} 个请求，最近一分钟负载为 ${rpm} rpm。`,loadHigh:"高负载，建议关注代理与失败率",loadMid:"中等负载，处于持续服务状态",loadLow:"低负载，适合联调或空闲期巡检",stateOnline:"状态：在线且可响应",stateUnknown:"状态：未知",stateError:"状态：无法读取遥测",sessionWarn:"建议：优先查看失败请求与代理稳定性",sessionGood:"建议：当前成功率表现稳定",noteEmpty:"暂无备注信息",success:(v)=>`成功率 ${v}%`,fail:(v)=>`失败率 ${v}%`,refresh:(v)=>`刷新：${v}`}}
+      const storageKeys={
+        lang:"gemini-ui-lang",
+        apiKey:"gemini-ui-api-key",
+        autoRefresh:"gemini-ui-auto-refresh",
+        refreshInterval:"gemini-ui-refresh-interval",
+        accountSearch:"gemini-ui-account-search",
+        accountFilter:"gemini-ui-account-filter",
+        accountSort:"gemini-ui-account-sort",
+        activeAccount:"gemini-ui-active-account",
       };
-      function setText(selector,value){const el=document.querySelector(selector);if(el) el.textContent=value}
-      function renderLanguage(lang){currentLang=lang;const pack=copy[lang];document.title=pack.title;document.documentElement.lang=pack.htmlLang;pack.staticTexts.forEach(([selector,value])=>setText(selector,value));langButtons.en.style.borderColor=lang==="en"?"color-mix(in srgb,var(--accent) 45%,var(--line2))":"";langButtons.zh.style.borderColor=lang==="zh"?"color-mix(in srgb,var(--accent) 45%,var(--line2))":"";applyTheme(root.getAttribute("data-theme")||"light")}
-      renderLanguage(currentLang);
-      themeToggle.addEventListener("click",()=>{const next=root.getAttribute("data-theme")==="dark"?"light":"dark";localStorage.setItem(themeKey,next);applyTheme(next)});
-      langButtons.en.addEventListener("click",()=>{localStorage.setItem(langKey,"en");renderLanguage("en");fetchAll()});
-      langButtons.zh.addEventListener("click",()=>{localStorage.setItem(langKey,"zh");renderLanguage("zh");fetchAll()});
+      const langButtons={en:document.getElementById("langEn"),zh:document.getElementById("langZh")};
+      let currentLang=localStorage.getItem(storageKeys.lang)||"zh";
+      const state={
+        latestAccounts:[],
+        latestBindings:[],
+        latestStats:{},
+        cookieHealth:{},
+        activeAccountID:localStorage.getItem(storageKeys.activeAccount)||"",
+        refreshTimer:null,
+        autoRefreshEnabled:localStorage.getItem(storageKeys.autoRefresh)!=="false",
+        refreshInterval:Number(localStorage.getItem(storageKeys.refreshInterval)||30000),
+      };
 
-      const fmt=new Intl.NumberFormat("en-US"),sparkData=[],MAX_SPARK=36,animState={};
-      document.getElementById("baseUrl").textContent=location.origin;
-      function animateValue(id,target,formatter){const el=document.getElementById(id);if(!el) return;const prev=animState[id]??0;if(target===prev){el.textContent=formatter(target);return}animState[id]=target;const start=performance.now(),duration=520;const tick=(now)=>{const t=Math.min((now-start)/duration,1),ease=1-Math.pow(1-t,3),value=prev+(target-prev)*ease;el.textContent=formatter(value);if(t<1) requestAnimationFrame(tick)};requestAnimationFrame(tick)}
-      const fmtInt=(v)=>fmt.format(Math.round(v)),fmtOne=(v)=>Number(v).toFixed(1),fmtUptime=(s)=>{s=Math.max(0,Math.round(s));const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),sec=s%60;return`${d?d+"d ":""}${h||d?h+"h ":""}${m||h||d?m+"m ":""}${sec}s`};
-      function updateSpark(value){sparkData.push(Number(value)||0);if(sparkData.length>MAX_SPARK) sparkData.shift();const w=640,h=230,max=Math.max(...sparkData,1)*1.15,step=w/Math.max(MAX_SPARK-1,1);let line="",fill="";sparkData.forEach((v,i)=>{const x=i*step,y=h-(v/max)*(h-20)-10;if(i===0){line=`M${x},${y}`;fill=`M${x},${h}L${x},${y}`}else{line+=` L${x},${y}`;fill+=` L${x},${y}`}});if(sparkData.length) fill+=` L${(sparkData.length-1)*step},${h}Z`;document.getElementById("sparkLine").setAttribute("d",line);document.getElementById("sparkFill").setAttribute("d",fill)}
-      function setChip(ok){const chip=document.getElementById("chip"),txt=document.getElementById("chipText"),pack=copy[currentLang].status;chip.classList.toggle("ok",ok);chip.classList.toggle("err",!ok);txt.textContent=ok?pack.online:pack.offline}
-      function updateNotes(list){const pack=copy[currentLang].status,notes=Array.isArray(list)&&list.length?list:[pack.noteEmpty];document.getElementById("noteSummary").textContent=notes[0];document.getElementById("notesList").innerHTML=notes.map(item=>`<li>${item}</li>`).join("")}
-      async function fetchAll(){const pack=copy[currentLang].status;try{const resp=await fetch("/api/telemetry");if(!resp.ok) throw new Error("bad status");const data=await resp.json();setChip(true);const total=Number(data.total_requests||0),ok=Number(data.success_requests||0),fail=Number(data.failed_requests||0),rpm=Number(data.rpm||0),inp=Number(data.input_tokens||0),out=Number(data.output_tokens||0);const successPct=total?ok/total*100:0,failPct=total?fail/total*100:0,avgTok=total?(inp+out)/total:0;animateValue("uptime",Number(data.uptime_seconds||0),fmtUptime);animateValue("rpm",rpm,fmtOne);animateValue("total",total,fmtInt);animateValue("ok",ok,fmtInt);animateValue("fail",fail,fmtInt);animateValue("inpTok",inp,fmtInt);animateValue("outTok",out,fmtInt);animateValue("avgTok",avgTok,fmtOne);document.getElementById("rpmLabel").textContent=`${fmtOne(rpm)} rpm`;document.getElementById("successPct").textContent=pack.success(fmtOne(successPct));document.getElementById("failPct").textContent=pack.fail(fmtOne(failPct));document.getElementById("ring").style.setProperty("--pct",successPct.toFixed(1));document.getElementById("ringValue").textContent=`${fmtOne(successPct)}%`;document.getElementById("heroStatus").textContent=data.status==="running"?pack.running:pack.unknown;const now=new Date();document.getElementById("lastUpdated").textContent=now.toLocaleTimeString(currentLang==="zh"?"zh-CN":"en-US",{hour12:false});document.getElementById("summaryText").textContent=pack.summary(fmt.format(total),fmtOne(rpm));document.getElementById("loadText").textContent=rpm>=120?pack.loadHigh:rpm>=30?pack.loadMid:pack.loadLow;document.getElementById("stateLine").textContent=data.status==="running"?pack.stateOnline:pack.stateUnknown;document.getElementById("refreshLine").textContent=pack.refresh(now.toLocaleString(currentLang==="zh"?"zh-CN":"en-US",{hour12:false}));document.getElementById("sessionLine").textContent=successPct<95?pack.sessionWarn:pack.sessionGood;updateNotes(data.note);updateSpark(rpm)}catch(_){setChip(false);document.getElementById("heroStatus").textContent=pack.offline;document.getElementById("summaryText").textContent=currentLang==="zh"?"遥测读取失败，请检查服务进程、网络或代理配置。":"Failed to read telemetry. Check the process, network, or proxy settings.";document.getElementById("loadText").textContent=currentLang==="zh"?"无法评估负载，请先恢复 telemetry 接口。":"Unable to estimate load until telemetry recovers.";document.getElementById("stateLine").textContent=pack.stateError}}
-      requestAnimationFrame(()=>document.querySelectorAll(".reveal").forEach((el)=>el.classList.add("visible")));
-      fetchAll();setInterval(fetchAll,5000);root.dataset.ready="true";
+      const copy={
+        zh:{
+          title:"Gemini Web 2 API 控制台",
+          texts:{
+            heroTitle:"服务和号池",
+            labelStatus:"服务状态",labelRefresh:"最后刷新",summaryTitle:"运行摘要",authTitle:"管理认证",authDesc:"输入管理用 API Key 后，页面会调用账号池接口进行增删改查和刷新操作。",
+            statsTitle:"运行指标",poolStatsTitle:"号池健康",bindingTitle:"会话绑定",incidentTitle:"最近异常",
+            accountsTitle:"账号池",editorTitle:"新增 / 编辑账号",
+            enabledText:"账号启用",editingHint:"正在编辑账号。敏感字段不会回显，留空表示保留原值。",cookieBuilderTitle:"常用 Gemini Cookie 拼接",cookieBuilderHint:"可粘贴单个 Cookie 值，也可粘贴 DevTools Cookie 表格多行，页面会自动拼成完整 Cookie 字符串。",parseCookieTable:"解析表格",buildCookies:"生成 Cookie",clearCookieParts:"清空分项",
+            save:"保存",show:"显示",hide:"隐藏",refreshNow:"立即刷新",refreshAllAccounts:"刷新全部账号",exportPool:"导出号池",exportIncidents:"导出异常",manual:"使用手册",saveAccount:"保存账号",resetForm:"清空表单",autoRefresh:"自动刷新",refreshRunning:"自动刷新中",refreshPaused:"已暂停自动刷新",refreshSkipped:"编辑中，已跳过自动刷新",
+            states:{online:"服务在线",offline:"读取失败",running:"运行中",unknown:"未知"},
+            summary:(total,rpm,accounts)=>`累计 ${total} 次请求，当前 ${rpm} rpm，账号池中共有 ${accounts} 个账号。`,
+            success:(v)=>`成功率 ${v}%`,fail:(v)=>`失败率 ${v}%`,
+            noBindings:"当前还没有活跃绑定。",noAccounts:"暂无账号，请在右侧表单新增。",noIncidents:"当前没有异常记录。",
+            authMissing:"请先输入 API Key。",saved:"已保存",saveFailed:"保存失败",refreshSuccess:"账号已刷新",actionDone:"操作已完成",deleted:"账号已删除",rebound:"绑定已迁移",exported:"导出完成",
+            searchPlaceholder:"搜索账号 ID 或邮箱",apiKeyPlaceholder:"输入 API Key",tokenPlaceholder:"可选",proxyPlaceholder:"可选，不填则走全局代理/本机网络",cookiesPlaceholder:"可选，建议登录态场景填写",filterAll:"全部账号",filterHealthy:"仅健康",filterBackoff:"仅避退",filterDisabled:"仅禁用",sortDefault:"默认排序",sortFailures:"按失败次数",sortBindings:"按绑定数",sortUpdated:"按最近使用",
+            runtimeStatus:"运行状态",loadStatus:"账号状态",boundSessions:"绑定会话",lastError:"最近错误",recentFailures:"最近失败",actionRequired:"处理建议",nextRetryAt:"下次重试",never:"从未",enabled:"启用",disabled:"禁用",usingCookies:"Cookies",manualToken:"手动 Token",hasProxy:"代理已配置",noProxy:"本机/全局代理",tokenReady:"Token 就绪",tokenNotReady:"登录态未就绪",backoff:"避退中",healthy:"健康",cookieHealth:"Cookie 体检",cookieHealthOK:"关键 Cookie 完整",cookieHealthMissing:"关键 Cookie 缺失",cookieCount:"Cookie 数量",abuseTime:"风控凭证时间",abuseAge:"距今",missingCookies:"缺失字段",checkCookie:"体检 Cookie",unbind:"解绑",rebind:"迁移绑定",unbindDone:"绑定已解除",details:"详情",edit:"编辑",refresh:"刷新",enable:"启用",disable:"禁用",delete:"删除",editModalTitle:"编辑账号凭证",editModalHint:"此弹窗会显示敏感字段，仅在输入 API Key 后可打开。",saveRepair:"保存修复",cancel:"取消",drawerTitle:"账号详情",timelineTitle:"最近失败",close:"关闭",deleteConfirm:(id)=>`确认删除账号 ${id} 吗？`,
+            bindingItem:(session,account)=>`会话 ${session} 绑定到 ${account}`
+          },
+          labels:{uptime:"运行时长",uptimeSub:"服务在线时长",total:"总请求数",totalSub:"累计处理量",success:"成功请求",fail:"失败请求",input:"输入 Token",inputSub:"累计输入",output:"输出 Token",outputSub:"累计输出",avg:"均次 Token",avgSub:"总 token / 总请求",poolTotal:"总账号",poolTotalSub:"已载入账号",poolHealthy:"健康账号",poolHealthySub:"当前可分配",poolBackoff:"未就绪",poolBackoffSub:"需更新登录态",poolDisabled:"禁用账号",poolDisabledSub:"人工停用"}
+        },
+        en:{
+          title:"Gemini Web 2 API Console",
+          texts:{
+            heroTitle:"Service and Account Pool",
+            labelStatus:"Service State",labelRefresh:"Last Refresh",summaryTitle:"Runtime Summary",authTitle:"Admin Auth",authDesc:"Enter the management API key to create, edit, delete, refresh, and toggle accounts from the UI.",
+            statsTitle:"Runtime Metrics",poolStatsTitle:"Pool Health",bindingTitle:"Session Bindings",incidentTitle:"Recent Incidents",
+            accountsTitle:"Account Pool",editorTitle:"Create / Edit Account",
+            enabledText:"Account enabled",editingHint:"Editing account. Sensitive fields are not shown; leave empty to keep existing values.",cookieBuilderTitle:"Common Gemini Cookie Builder",cookieBuilderHint:"Paste individual values or DevTools cookie table rows; the page will compose a full Cookie string.",parseCookieTable:"Parse Table",buildCookies:"Build Cookie",clearCookieParts:"Clear Parts",
+            save:"Save",show:"Show",hide:"Hide",refreshNow:"Refresh",refreshAllAccounts:"Refresh All Accounts",exportPool:"Export Pool",exportIncidents:"Export Incidents",manual:"Manual",saveAccount:"Save Account",resetForm:"Reset",autoRefresh:"Auto Refresh",refreshRunning:"Auto refresh on",refreshPaused:"Auto refresh paused",refreshSkipped:"Editing; auto refresh skipped",states:{online:"Online",offline:"Offline",running:"Running",unknown:"Unknown"},
+            summary:(total,rpm,accounts)=>`${total} total requests, ${rpm} rpm, and ${accounts} accounts in the pool.`,
+            success:(v)=>`Success ${v}%`,fail:(v)=>`Failure ${v}%`,
+            noBindings:"No active bindings yet.",noAccounts:"No accounts yet. Create one from the form.",noIncidents:"No incidents right now.",
+            authMissing:"Enter API key first.",saved:"Saved",saveFailed:"Save failed",refreshSuccess:"Account refreshed",actionDone:"Action completed",deleted:"Account deleted",rebound:"Binding moved",exported:"Export complete",
+            searchPlaceholder:"Search by account ID or email",apiKeyPlaceholder:"Enter API Key",tokenPlaceholder:"Optional",proxyPlaceholder:"Optional; empty uses global proxy/local network",cookiesPlaceholder:"Optional, recommended for signed-in sessions",filterAll:"All accounts",filterHealthy:"Healthy only",filterBackoff:"Backoff only",filterDisabled:"Disabled only",sortDefault:"Default sort",sortFailures:"By failures",sortBindings:"By bindings",sortUpdated:"By recent usage",
+            runtimeStatus:"Runtime",loadStatus:"Account State",boundSessions:"Bound Sessions",lastError:"Last Error",recentFailures:"Recent Failures",actionRequired:"Action",nextRetryAt:"Next Retry",never:"Never",enabled:"Enabled",disabled:"Disabled",usingCookies:"Cookies",manualToken:"Manual Token",hasProxy:"Proxy Set",noProxy:"Local/Global Proxy",tokenReady:"Token Ready",tokenNotReady:"Login Not Ready",backoff:"Backoff",healthy:"Healthy",cookieHealth:"Cookie Health",cookieHealthOK:"Important cookies present",cookieHealthMissing:"Important cookies missing",cookieCount:"Cookie Count",abuseTime:"Abuse Exemption Time",abuseAge:"Age",missingCookies:"Missing",checkCookie:"Check Cookie",unbind:"Unbind",rebind:"Rebind",unbindDone:"Binding removed",details:"Details",edit:"Edit",refresh:"Refresh",enable:"Enable",disable:"Disable",delete:"Delete",editModalTitle:"Edit Credentials",editModalHint:"This dialog shows sensitive fields and requires API Key.",saveRepair:"Save Repair",cancel:"Cancel",drawerTitle:"Account Details",timelineTitle:"Recent Failures",close:"Close",deleteConfirm:(id)=>`Delete account ${id}?`,
+            bindingItem:(session,account)=>`Session ${session} is bound to ${account}`
+          },
+          labels:{uptime:"Uptime",uptimeSub:"time online",total:"Total Requests",totalSub:"lifetime volume",success:"Succeeded",fail:"Failed",input:"Input Tokens",inputSub:"cumulative input",output:"Output Tokens",outputSub:"cumulative output",avg:"Avg Tokens",avgSub:"total tokens / total requests",poolTotal:"Accounts",poolTotalSub:"loaded accounts",poolHealthy:"Healthy",poolHealthySub:"currently allocatable",poolBackoff:"Not Ready",poolBackoffSub:"update login cookies",poolDisabled:"Disabled",poolDisabledSub:"manually disabled"}
+        }
+      };
+
+      function t(){return copy[currentLang]}
+      function qs(selector){return document.querySelector(selector)}
+      function setText(selector,value){const el=qs(selector);if(el) el.textContent=value}
+      function readStored(key,fallback=""){const value=localStorage.getItem(key);return value===null?fallback:value}
+      function writeStored(key,value){if(value===undefined || value===null || value===""){localStorage.removeItem(key);return}localStorage.setItem(key,String(value))}
+      function getApiKey(){return localStorage.getItem(storageKeys.apiKey)||""}
+      function authHeaders(){const key=getApiKey();return key?{"Authorization":`Bearer ${key}`}:{} }
+      function fmtNum(v){return new Intl.NumberFormat(currentLang==="zh"?"zh-CN":"en-US").format(Math.round(v||0))}
+      function fmtOne(v){return Number(v||0).toFixed(1)}
+      function fmtTime(value){if(!value) return t().texts.never;const d=new Date(value);return Number.isNaN(d.getTime())?t().texts.never:d.toLocaleString(currentLang==="zh"?"zh-CN":"en-US",{hour12:false})}
+      function fmtUptime(s){s=Math.max(0,Math.round(s||0));const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),sec=s%60;return currentLang==="zh"?`${d?d+"天 ":""}${h||d?h+"小时 ":""}${m||h||d?m+"分 ":""}${sec}秒`:`${d?d+"d ":""}${h||d?h+"h ":""}${m||h||d?m+"m ":""}${sec}s`}
+      function fmtDuration(seconds){seconds=Math.max(0,Math.round(seconds||0));const d=Math.floor(seconds/86400),h=Math.floor(seconds%86400/3600),m=Math.floor(seconds%3600/60);return currentLang==="zh"?`${d?d+"天 ":""}${h?h+"小时 ":""}${!d&&m?m+"分":""}`.trim()||"0分":`${d?d+"d ":""}${h?h+"h ":""}${!d&&m?m+"m":""}`.trim()||"0m"}
+
+      function applyLanguage(){
+        document.title=t().title;
+        document.documentElement.lang=currentLang==="zh"?"zh-CN":"en";
+        const c=t().texts,l=t().labels;
+        setText("#heroTitle",c.heroTitle);setText("#labelStatus",c.labelStatus);setText("#labelRefresh",c.labelRefresh);setText("#summaryTitle",c.summaryTitle);setText("#authTitle",c.authTitle);setText("#authDesc",c.authDesc);setText("#statsTitle",c.statsTitle);setText("#poolStatsTitle",c.poolStatsTitle);setText("#bindingTitle",c.bindingTitle);setText("#incidentTitle",c.incidentTitle);setText("#accountsTitle",c.accountsTitle);setText("#editorTitle",c.editorTitle);setText("#enabledText",c.enabledText);setText("#cookieBuilderTitle",c.cookieBuilderTitle);setText("#cookieBuilderHint",c.cookieBuilderHint);setText("#editModalTitle",c.editModalTitle);setText("#editModalHint",c.editModalHint);setText("#editEnabledText",c.enabledText);setText("#drawerTitle",c.drawerTitle);setText("#drawerTimelineTitle",c.timelineTitle);
+        setText("#uptimeLabel",l.uptime);setText("#uptimeSub",l.uptimeSub);setText("#totalLabel",l.total);setText("#totalSub",l.totalSub);setText("#successLabel",l.success);setText("#failLabel",l.fail);setText("#inputLabel",l.input);setText("#inputSub",l.inputSub);setText("#outputLabel",l.output);setText("#outputSub",l.outputSub);setText("#avgLabel",l.avg);setText("#avgSub",l.avgSub);setText("#poolTotalLabel",l.poolTotal);setText("#poolTotalSub",l.poolTotalSub);setText("#poolHealthyLabel",l.poolHealthy);setText("#poolHealthySub",l.poolHealthySub);setText("#poolBackoffLabel",l.poolBackoff);setText("#poolBackoffSub",l.poolBackoffSub);setText("#poolDisabledLabel",l.poolDisabled);setText("#poolDisabledSub",l.poolDisabledSub);
+        qs("#langZh").style.background=currentLang==="zh"?"#111827":"#fff";qs("#langZh").style.color=currentLang==="zh"?"#fff":"#111827";qs("#langEn").style.background=currentLang==="en"?"#111827":"#fff";qs("#langEn").style.color=currentLang==="en"?"#fff":"#111827";
+        qs("#refreshAll").textContent=c.refreshNow;qs("#refreshAllAccounts").textContent=c.refreshAllAccounts;qs("#exportPoolBtn").textContent=c.exportPool;qs("#exportIncidentsBtn").textContent=c.exportIncidents;qs("#autoRefreshLabel").textContent=c.autoRefresh;qs("#toggleApiKey").textContent=qs("#apiKeyInput").type==="password"?c.show:c.hide;qs("#saveApiKey").textContent=c.save;qs("#saveAccountBtn").textContent=c.saveAccount;qs("#resetFormBtn").textContent=c.resetForm;qs("#toggleTokenBtn").textContent=qs("#accountToken").type==="password"?c.show+" Token":c.hide+" Token";qs("#parseCookieTableBtn").textContent=c.parseCookieTable;qs("#buildCookiesBtn").textContent=c.buildCookies;qs("#clearCookiePartsBtn").textContent=c.clearCookieParts;qs("#closeDrawerBtn").textContent=c.close;qs("#closeEditModalBtn").textContent=c.close;qs("#closeEditModalBtn2").textContent=c.cancel;qs("#saveEditAccountBtn").textContent=c.saveRepair;qs("#toggleEditTokenBtn").textContent=qs("#editAccountToken").type==="password"?c.show+" Token":c.hide+" Token";
+        qs("#accountSearch").placeholder=c.searchPlaceholder;qs("#apiKeyInput").placeholder=c.apiKeyPlaceholder;qs("#accountToken").placeholder=c.tokenPlaceholder;qs("#accountProxy").placeholder=c.proxyPlaceholder;qs("#accountCookies").placeholder=c.cookiesPlaceholder;qs("#rebindSessionBtn").textContent=c.rebind;
+        renderRefreshControls();renderPoolStats();renderIncidents();renderAccounts();renderBindings();
+      }
+
+      function showToast(kind,title,message){
+        const wrap=qs("#toastWrap");
+        const el=document.createElement("div");
+        el.className=`toast ${kind}`;
+        el.innerHTML=`<strong>${title}</strong><span>${message||""}</span>`;
+        wrap.appendChild(el);
+        setTimeout(()=>{el.remove()},2600);
+      }
+
+      function downloadJSON(filename,data){
+        const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json;charset=utf-8"});
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement("a");
+        link.href=url;
+        link.download=filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function fetchTelemetry(){
+        const resp=await fetch("/api/telemetry");
+        if(!resp.ok) throw new Error("telemetry failed");
+        return resp.json();
+      }
+
+      async function fetchAccounts(){
+        const resp=await fetch("/api/accounts",{headers:authHeaders(),credentials:"same-origin"});
+	        if(!resp.ok) throw new Error("accounts failed");
+	        return resp.json();
+	      }
+
+      function renderTelemetry(data){
+        const c=t().texts;
+        const total=Number(data.total_requests||0),ok=Number(data.success_requests||0),fail=Number(data.failed_requests||0),rpm=Number(data.rpm||0),inp=Number(data.input_tokens||0),out=Number(data.output_tokens||0);
+        const successPct=total?ok/total*100:0,failPct=total?fail/total*100:0,avgTok=total?(inp+out)/total:0;
+        setText("#heroStatus",data.status==="running"?c.states.running:c.states.unknown);
+        setText("#serviceState",data.status==="running"?c.states.online:c.states.offline);
+        setText("#lastUpdated",new Date().toLocaleTimeString(currentLang==="zh"?"zh-CN":"en-US",{hour12:false}));
+        setText("#summaryText",c.summary(fmtNum(total),fmtOne(rpm),state.latestAccounts.length));
+        setText("#uptime",fmtUptime(data.uptime_seconds||0));
+        setText("#rpm",fmtOne(rpm));
+        setText("#total",fmtNum(total));
+        setText("#ok",fmtNum(ok));
+        setText("#fail",fmtNum(fail));
+        setText("#inpTok",fmtNum(inp));
+        setText("#outTok",fmtNum(out));
+        setText("#avgTok",fmtOne(avgTok));
+        setText("#successPct",c.success(fmtOne(successPct)));
+        setText("#failPct",c.fail(fmtOne(failPct)));
+      }
+
+      function renderPoolStats(){
+        setText("#poolTotal",fmtNum(state.latestStats.total_accounts||0));
+        setText("#poolHealthy",fmtNum(state.latestStats.healthy_accounts||0));
+        setText("#poolBackoff",fmtNum((state.latestStats.not_ready_accounts||0)+(state.latestStats.backoff_accounts||0)));
+        setText("#poolDisabled",fmtNum(state.latestStats.disabled_accounts||0));
+      }
+
+      function renderRefreshControls(){
+		if(state.refreshInterval < 15000){state.refreshInterval=15000;localStorage.setItem(storageKeys.refreshInterval,String(state.refreshInterval))}
+        qs("#autoRefreshToggle").checked=state.autoRefreshEnabled;
+        qs("#refreshIntervalSelect").value=String(state.refreshInterval);
+        const dot=qs("#refreshDot");
+        dot.classList.toggle("paused",!state.autoRefreshEnabled);
+        dot.classList.toggle("off",false);
+        setText("#refreshStatusText",state.autoRefreshEnabled?t().texts.refreshRunning:t().texts.refreshPaused);
+      }
+
+      function collectIncidents(){
+        return state.latestAccounts.flatMap(account=>((account.recent_failures||[]).map(item=>({...item,account_id:account.id,email:account.email||""})))).sort((a,b)=>new Date(b.at||0)-new Date(a.at||0));
+      }
+
+      function renderIncidents(){
+        const list=qs("#incidentList");
+        const incidents=collectIncidents().slice(0,12);
+        if(!incidents.length){list.innerHTML=`<div class="empty">${t().texts.noIncidents}</div>`;return}
+        list.innerHTML=incidents.map(item=>`<div class="incident" data-account-id="${item.account_id}"><strong>${item.account_id}${item.email?` · ${item.email}`:""} · ${item.label||item.code||t().texts.recentFailures}</strong><span>${item.reason}</span><span>${item.action||""}</span><span>${fmtTime(item.at)}</span></div>`).join("");
+      }
+
+      function highlightAccount(accountID){
+        state.activeAccountID=accountID||"";
+        writeStored(storageKeys.activeAccount,state.activeAccountID);
+        document.querySelectorAll(".account").forEach(el=>el.classList.toggle("active",el.getAttribute("data-account-id")===state.activeAccountID));
+      }
+
+      function openAccountDrawer(accountID){
+        const account=state.latestAccounts.find(item=>item.id===accountID);
+        if(!account) return;
+        state.activeAccountID=accountID;
+        writeStored(storageKeys.activeAccount,state.activeAccountID);
+        highlightAccount(accountID);
+        const health=state.cookieHealth[accountID];
+        const healthDetails=renderCookieHealthDetails(health);
+        const details=qs("#drawerDetails");
+        details.innerHTML=`
+          <div class="detail"><strong>ID</strong><span>${account.id}</span></div>
+          <div class="detail"><strong>Email</strong><span>${account.email||"-"}</span></div>
+          <div class="detail"><strong>${t().texts.loadStatus}</strong><span>${account.state_label||"-"}</span></div>
+          <div class="detail"><strong>Code</strong><span>${account.state_code||"-"}</span></div>
+          <div class="detail"><strong>${t().texts.boundSessions}</strong><span>${account.bound_sessions||0}</span></div>
+          <div class="detail"><strong>${t().texts.lastError}</strong><span>${account.last_error||t().texts.never}</span></div>
+          <div class="detail"><strong>Weight</strong><span>${account.weight||1}</span></div>
+          <div class="detail"><strong>Retryable</strong><span>${account.retryable?"true":"false"}</span></div>
+          <div class="detail"><strong>Proxy</strong><span>${account.has_proxy?t().texts.hasProxy:t().texts.noProxy}</span></div>
+          <div class="detail full"><strong>${t().texts.actionRequired}</strong><span>${account.action_required||t().texts.never}</span></div>
+          <div class="detail full"><strong>${t().texts.nextRetryAt}</strong><span>${fmtTime(account.next_retry_at)}</span></div>
+          <div class="detail full"><strong>Last Used</strong><span>${fmtTime(account.last_used_at)}</span></div>
+          <div class="detail full"><strong>Last Refresh</strong><span>${fmtTime(account.last_token_refresh_at)}</span></div>
+          ${healthDetails}
+        `;
+        const timeline=qs("#drawerTimeline");
+        const failures=account.recent_failures||[];
+        timeline.innerHTML=failures.length?failures.map(item=>`<div class="timeline-item"><strong>${item.label||item.code||t().texts.recentFailures}</strong><span>${item.reason}</span><span>${item.action||""}</span><span>${fmtTime(item.at)}</span></div>`).join(""):`<div class="timeline-item"><strong>${t().texts.recentFailures}</strong><span>${t().texts.never}</span></div>`;
+        qs("#accountDrawer").classList.add("open");
+        qs("#drawerBackdrop").classList.add("open");
+        qs("#accountDrawer").setAttribute("aria-hidden","false");
+      }
+
+      function renderCookieHealthSummary(accountID){
+        const health=state.cookieHealth[accountID];
+        if(!health) return "";
+        const c=t().texts;
+        const missing=health.important_missing||[];
+        const statusClass=missing.length?"warn":"ok";
+        const title=missing.length?c.cookieHealthMissing:c.cookieHealthOK;
+        const abuse=health.abuse_exemption||{};
+        const abuseText=abuse.value_seen&&abuse.time?`${c.abuseTime}: ${fmtTime(abuse.time)} · ${c.abuseAge}: ${fmtDuration(abuse.age_sec)}`:`${c.abuseTime}: ${c.never}`;
+        return `<div class="cookie-health ${statusClass}"><strong>${c.cookieHealth} · ${title}</strong><span>${c.cookieCount}: ${health.cookie_count||0}</span><span>${abuseText}</span>${missing.length?`<span>${c.missingCookies}: ${missing.join(", ")}</span>`:""}</div>`;
+      }
+
+      function renderCookieHealthDetails(health){
+        if(!health) return `<div class="detail full"><strong>${t().texts.cookieHealth}</strong><span>${t().texts.never}</span></div>`;
+        const c=t().texts;
+        const missing=health.important_missing||[];
+        const abuse=health.abuse_exemption||{};
+        const opaque=(health.opaque_session_cookies||[]).join(", ")||c.never;
+        return `
+          <div class="detail full"><strong>${c.cookieHealth}</strong><span>${missing.length?c.cookieHealthMissing:c.cookieHealthOK}</span></div>
+          <div class="detail"><strong>${c.cookieCount}</strong><span>${health.cookie_count||0}</span></div>
+          <div class="detail"><strong>${c.abuseAge}</strong><span>${abuse.value_seen?fmtDuration(abuse.age_sec):c.never}</span></div>
+          <div class="detail full"><strong>${c.abuseTime}</strong><span>${abuse.time?fmtTime(abuse.time):c.never}</span></div>
+          <div class="detail full"><strong>${c.missingCookies}</strong><span>${missing.length?missing.join(", "):c.never}</span></div>
+          <div class="detail full"><strong>Opaque Session Cookies</strong><span>${opaque}</span></div>
+        `;
+      }
+
+      async function checkCookieHealth(accountID){
+        const health=await requestJSON(`/api/accounts/${encodeURIComponent(accountID)}/cookie-health`,{method:"GET"});
+        state.cookieHealth[accountID]=health;
+        renderAccounts();
+        if(state.activeAccountID===accountID && qs("#accountDrawer").classList.contains("open")) openAccountDrawer(accountID);
+        const missing=health.important_missing||[];
+        showToast(missing.length?"err":"ok",t().texts.cookieHealth,missing.length?`${t().texts.missingCookies}: ${missing.join(", ")}`:t().texts.cookieHealthOK);
+      }
+
+      function closeAccountDrawer(){
+        qs("#accountDrawer").classList.remove("open");
+        qs("#drawerBackdrop").classList.remove("open");
+        qs("#accountDrawer").setAttribute("aria-hidden","true");
+      }
+
+      async function openEditModal(accountID){
+        const account=await requestJSON(`/api/accounts/${encodeURIComponent(accountID)}/details`,{method:"GET"});
+        qs("#editAccountId").value=account.id||"";
+        qs("#editAccountEmail").value=account.email||"";
+        qs("#editAccountWeight").value=account.weight||1;
+        qs("#editAccountProxy").value=account.proxy||"";
+        qs("#editAccountToken").value=account.token||"";
+        qs("#editAccountCookies").value=account.cookies||"";
+        qs("#editAccountEnabled").checked=!!account.enabled;
+        qs("#editModalBackdrop").classList.add("open");
+        qs("#editAccountEmail").focus();
+      }
+
+      function closeEditModal(){
+        qs("#editModalBackdrop").classList.remove("open");
+      }
+
+      async function saveEditModal(){
+        const payload={
+          id:qs("#editAccountId").value.trim(),
+          email:qs("#editAccountEmail").value.trim(),
+          weight:Number(qs("#editAccountWeight").value||1),
+          proxy:qs("#editAccountProxy").value.trim(),
+          token:qs("#editAccountToken").value.trim(),
+          cookies:qs("#editAccountCookies").value.trim(),
+          enabled:qs("#editAccountEnabled").checked,
+        };
+        await requestJSON("/api/accounts",{method:"POST",body:JSON.stringify(payload)});
+        showToast("ok",t().texts.saved,payload.id);
+        closeEditModal();
+        await refreshAll();
+      }
+
+      function accountTags(account){
+        const c=t().texts;
+        const tags=[];
+        tags.push(`<span class="tag ${account.enabled?"ok":"danger"}">${account.enabled?c.enabled:c.disabled}</span>`);
+        tags.push(`<span class="tag ${account.state_code==="ready"?"ok":(account.state_code==="disabled"?"danger":"warn")}">${account.state_label||account.state_code||c.healthy}</span>`);
+        tags.push(`<span class="tag ${account.token_ready?"ok":"warn"}">${account.token_ready?c.tokenReady:c.tokenNotReady}</span>`);
+        if(account.using_cookies) tags.push(`<span class="tag">${c.usingCookies}</span>`);
+        if(account.has_manual_token) tags.push(`<span class="tag">${c.manualToken}</span>`);
+        tags.push(`<span class="tag ${account.has_proxy?"ok":""}">${account.has_proxy?c.hasProxy:c.noProxy}</span>`);
+        return tags.join("");
+      }
+
+      function renderAccounts(){
+        const list=qs("#accountList");
+        const q=(qs("#accountSearch").value||"").trim().toLowerCase();
+        const filter=qs("#accountFilter")?.value||"all";
+        const sort=qs("#accountSort")?.value||"default";
+        let accounts=state.latestAccounts.filter(account=>!q||account.id.toLowerCase().includes(q)||(account.email||"").toLowerCase().includes(q));
+        if(filter==="healthy") accounts=accounts.filter(account=>account.state_code==="ready");
+        if(filter==="backoff") accounts=accounts.filter(account=>account.state_code==="backoff" || account.state_code==="not_ready" || account.state_code==="login_consent_required" || account.state_code==="request_token_missing");
+        if(filter==="disabled") accounts=accounts.filter(account=>!account.enabled);
+        if(sort==="failures") accounts=[...accounts].sort((a,b)=>(b.consecutive_failures||0)-(a.consecutive_failures||0));
+        if(sort==="bindings") accounts=[...accounts].sort((a,b)=>(b.bound_sessions||0)-(a.bound_sessions||0));
+        if(sort==="updated") accounts=[...accounts].sort((a,b)=>new Date(b.last_used_at||0)-new Date(a.last_used_at||0));
+        if(!accounts.length){list.innerHTML=`<div class="empty">${t().texts.noAccounts}</div>`;return}
+        list.innerHTML=accounts.map(account=>`
+          <article class="account" data-account-id="${account.id}">
+            <div class="account-top">
+              <div>
+                <strong>${account.id}</strong>
+                <span>${account.email||"-"}</span>
+              </div>
+              <div class="tags">${accountTags(account)}</div>
+            </div>
+            <div class="account-meta">
+              <span>${t().texts.boundSessions}: ${account.bound_sessions}</span>
+              <span>${t().texts.lastError}: ${account.state_label||account.last_error||t().texts.never}</span>
+            </div>
+            <div class="account-meta">
+              <span>Weight: ${account.weight}</span>
+              <span>${t().texts.actionRequired}: ${account.action_required||t().texts.never}</span>
+            </div>
+            <div class="account-meta">
+              <span>Last Used: ${fmtTime(account.last_used_at)}</span>
+              <span>Last Refresh: ${fmtTime(account.last_token_refresh_at)}</span>
+              <span>${t().texts.nextRetryAt}: ${fmtTime(account.next_retry_at)}</span>
+            </div>
+            <div class="account-actions" style="margin-top:14px">
+              <div class="toolbar">
+                <button class="btn" type="button" data-details="${account.id}">${t().texts.details}</button>
+                <button class="btn" type="button" data-edit="${account.id}">${t().texts.edit}</button>
+                <button class="btn" type="button" data-refresh="${account.id}">${t().texts.refresh}</button>
+                <button class="btn" type="button" data-cookie-health="${account.id}">${t().texts.checkCookie}</button>
+                <button class="btn" type="button" data-toggle="${account.id}" data-enabled="${account.enabled}">${account.enabled?t().texts.disable:t().texts.enable}</button>
+                <button class="btn danger" type="button" data-delete="${account.id}">${t().texts.delete}</button>
+              </div>
+            </div>
+            ${renderCookieHealthSummary(account.id)}
+            <div class="failures">${(account.recent_failures||[]).length?(account.recent_failures||[]).map(item=>`<div class="failure"><strong>${item.label||item.code||t().texts.recentFailures}</strong><span>${item.reason}</span><span>${item.action||""}</span><span>${fmtTime(item.at)}</span></div>`).join(""):`<div class="failure"><strong>${t().texts.recentFailures}</strong><span>${t().texts.never}</span></div>`}</div>
+          </article>
+        `).join("");
+        const select=qs("#rebindAccountSelect");
+        select.innerHTML=state.latestAccounts.map(account=>`<option value="${account.id}">${account.id}${account.email?` · ${account.email}`:""}</option>`).join("");
+        highlightAccount(state.activeAccountID);
+        if(state.activeAccountID && qs("#accountDrawer").classList.contains("open")){
+          const exists=state.latestAccounts.some(item=>item.id===state.activeAccountID);
+          if(exists){
+            openAccountDrawer(state.activeAccountID);
+          } else {
+            closeAccountDrawer();
+          }
+        }
+      }
+
+      function renderBindings(){
+        const list=qs("#bindingsList");
+        if(!state.latestBindings.length){list.innerHTML=`<div class="empty">${t().texts.noBindings}</div>`;return}
+        list.innerHTML=state.latestBindings.map(binding=>`<div class="item"><div class="item-top"><strong>${binding.session_key}</strong><button class="btn" type="button" data-unbind="${binding.session_key}">${t().texts.unbind}</button></div><span>${t().texts.bindingItem(binding.session_key,binding.account_id)}</span><span>${fmtTime(binding.last_used_at)}</span></div>`).join("");
+      }
+
+      function fillForm(account){
+        qs("#accountId").value=account.id||"";
+        qs("#accountEmail").value=account.email||"";
+        qs("#accountWeight").value=account.weight||1;
+        qs("#accountEnabled").checked=!!account.enabled;
+        qs("#accountProxy").value=account.proxy||"";
+        qs("#accountCookies").value="";
+        qs("#accountToken").value="";
+        clearCookieParts();
+        qs("#accountForm").scrollIntoView({behavior:"smooth",block:"center"});
+        qs("#accountEmail").focus();
+      }
+
+      function buildCookieString(){
+        const parts=[
+          ["__Secure-1PSID",qs("#cookie1PSID").value.trim()],
+          ["__Secure-1PAPISID",qs("#cookie1PAPISID").value.trim()],
+          ["__Secure-1PSIDTS",qs("#cookie1PSIDTS").value.trim()],
+          ["__Secure-1PSIDCC",qs("#cookie1PSIDCC").value.trim()],
+          ["NID",qs("#cookieNID").value.trim()],
+        ].filter(([,value])=>value);
+        return parts.map(([name,value])=>`${name}=${value}`).join("; ");
+      }
+
+      function parseCookieTableText(text){
+        const cookies=[];
+        const seen=new Set();
+        const allowed=/^(NID|SID|HSID|SSID|APISID|SAPISID|SIDCC|__Secure-(?:1|3)(?:PAPISID|PSID|PSIDTS|PSIDCC)|__Secure-ENID|_ga|_ga_[A-Z0-9]+|_gcl_au)$/;
+        for(const rawLine of String(text||"").split(/\r?\n/)){
+          const line=rawLine.trim();
+          if(!line) continue;
+          let name="", value="";
+          const equalMatch=line.match(/^([^=;\s]+)=([^;]+)$/);
+          if(equalMatch){
+            name=equalMatch[1].trim();
+            value=equalMatch[2].trim();
+          } else {
+            const parts=line.split(/\t|\s{2,}/).map(item=>item.trim()).filter(Boolean);
+            if(parts.length < 2) continue;
+            name=parts[0];
+            value=parts[1];
+          }
+          if(!allowed.test(name) || !value || seen.has(name)) continue;
+          seen.add(name);
+          cookies.push(`${name}=${value}`);
+        }
+        return cookies.join("; ");
+      }
+
+      function clearCookieParts(){
+        ["#cookie1PSID","#cookie1PAPISID","#cookie1PSIDTS","#cookie1PSIDCC","#cookieNID"].forEach(selector=>{qs(selector).value=""});
+        qs("#cookieTableInput").value="";
+      }
+
+      async function requestJSON(url,options={}){
+        const key=getApiKey();
+        if(!key) throw new Error(t().texts.authMissing);
+        const resp=await fetch(url,{...options,credentials:"same-origin",headers:{"Content-Type":"application/json",...authHeaders(),...(options.headers||{})}});
+        const data=await resp.json().catch(()=>({}));
+        if(!resp.ok) throw new Error(data?.error?.message||data?.message||`HTTP ${resp.status}`);
+        return data;
+      }
+
+      async function refreshAll(){
+        try{
+          const [telemetry,accountsData]=await Promise.all([fetchTelemetry(),fetchAccounts().catch(()=>({accounts:[],bindings:[],stats:{}}))]);
+          state.latestAccounts=Array.isArray(accountsData.accounts)?accountsData.accounts:[];
+          state.latestBindings=Array.isArray(accountsData.bindings)?accountsData.bindings:[];
+          state.latestStats=accountsData.stats||{};
+          renderTelemetry(telemetry);
+          renderPoolStats();
+          renderIncidents();
+          renderAccounts();
+          renderBindings();
+        }catch(err){
+          setText("#serviceState",t().texts.states.offline);
+          setText("#summaryText",String(err.message||err));
+          showToast("err",t().texts.saveFailed,String(err.message||err));
+        }
+      }
+
+      qs("#baseUrl").textContent=location.origin;
+      qs("#apiKeyInput").value=getApiKey();
+      qs("#accountSearch").insertAdjacentHTML("afterend",'<select id="accountFilter"><option value="all">all</option><option value="healthy">healthy</option><option value="backoff">backoff</option><option value="disabled">disabled</option></select><select id="accountSort"><option value="default">default</option><option value="failures">failures</option><option value="bindings">bindings</option><option value="updated">updated</option></select>');
+      qs("#accountSearch").value=readStored(storageKeys.accountSearch,"");
+      function syncAccountControlsText(){const c=t().texts;const filter=qs("#accountFilter");const sort=qs("#accountSort");const filterValue=readStored(storageKeys.accountFilter,"all");const sortValue=readStored(storageKeys.accountSort,"default");if(filter){filter.innerHTML=`<option value="all">${c.filterAll}</option><option value="healthy">${c.filterHealthy}</option><option value="backoff">${c.filterBackoff}</option><option value="disabled">${c.filterDisabled}</option>`;filter.value=filterValue} if(sort){sort.innerHTML=`<option value="default">${c.sortDefault}</option><option value="failures">${c.sortFailures}</option><option value="bindings">${c.sortBindings}</option><option value="updated">${c.sortUpdated}</option>`;sort.value=sortValue}}
+      function bindEvents(){
+      qs("#langZh").addEventListener("click",()=>{currentLang="zh";localStorage.setItem(storageKeys.lang,"zh");applyLanguage();refreshAll()});
+      qs("#langEn").addEventListener("click",()=>{currentLang="en";localStorage.setItem(storageKeys.lang,"en");applyLanguage();refreshAll()});
+      qs("#saveApiKey").addEventListener("click",()=>{localStorage.setItem(storageKeys.apiKey,qs("#apiKeyInput").value.trim());showToast("ok",t().texts.saved,qs("#apiKeyInput").value.trim()?"API Key saved":"API Key cleared");refreshAll()});
+      qs("#toggleApiKey").addEventListener("click",()=>{const input=qs("#apiKeyInput");input.type=input.type==="password"?"text":"password";qs("#toggleApiKey").textContent=input.type==="password"?t().texts.show:t().texts.hide});
+      qs("#toggleTokenBtn").addEventListener("click",()=>{const input=qs("#accountToken");input.type=input.type==="password"?"text":"password";qs("#toggleTokenBtn").textContent=input.type==="password"?t().texts.show+" Token":t().texts.hide+" Token"});
+      qs("#resetFormBtn").addEventListener("click",()=>{qs("#accountForm").reset();qs("#accountWeight").value=1;qs("#accountEnabled").checked=true;clearCookieParts();});
+      qs("#parseCookieTableBtn").addEventListener("click",()=>{const cookie=parseCookieTableText(qs("#cookieTableInput").value);if(cookie){qs("#accountCookies").value=cookie;showToast("ok",t().texts.saved,t().texts.parseCookieTable)}else{showToast("err",t().texts.saveFailed,"No supported cookie rows found")}});
+      qs("#buildCookiesBtn").addEventListener("click",()=>{const cookie=buildCookieString();if(cookie){qs("#accountCookies").value=cookie;showToast("ok",t().texts.saved,t().texts.buildCookies)}});
+      qs("#clearCookiePartsBtn").addEventListener("click",clearCookieParts);
+      qs("#refreshAll").addEventListener("click",refreshAll);
+      qs("#exportPoolBtn").addEventListener("click",()=>{downloadJSON(`account-pool-${Date.now()}.json`,{exported_at:new Date().toISOString(),stats:state.latestStats,bindings:state.latestBindings,accounts:state.latestAccounts});showToast("ok",t().texts.exported,t().texts.exportPool)});
+      qs("#exportIncidentsBtn").addEventListener("click",()=>{downloadJSON(`account-incidents-${Date.now()}.json`,{exported_at:new Date().toISOString(),incidents:collectIncidents()});showToast("ok",t().texts.exported,t().texts.exportIncidents)});
+      qs("#refreshAllAccounts").addEventListener("click",async()=>{try{await requestJSON("/api/accounts/refresh-all",{method:"POST"});showToast("ok",t().texts.refreshSuccess,t().texts.actionDone);await refreshAll();}catch(err){showToast("err",t().texts.saveFailed,err.message||String(err))}});
+      qs("#accountSearch").addEventListener("input",()=>{writeStored(storageKeys.accountSearch,qs("#accountSearch").value.trim());renderAccounts();});
+      qs("#accountFilter").addEventListener("change",()=>{writeStored(storageKeys.accountFilter,qs("#accountFilter").value);renderAccounts();});
+      qs("#accountSort").addEventListener("change",()=>{writeStored(storageKeys.accountSort,qs("#accountSort").value);renderAccounts();});
+      qs("#autoRefreshToggle").addEventListener("change",()=>{state.autoRefreshEnabled=qs("#autoRefreshToggle").checked;localStorage.setItem(storageKeys.autoRefresh,String(state.autoRefreshEnabled));renderRefreshControls();restartAutoRefresh();});
+      qs("#refreshIntervalSelect").addEventListener("change",()=>{state.refreshInterval=Math.max(15000,Number(qs("#refreshIntervalSelect").value||30000));localStorage.setItem(storageKeys.refreshInterval,String(state.refreshInterval));renderRefreshControls();restartAutoRefresh();});
+      qs("#rebindSessionBtn").addEventListener("click",async()=>{try{const sessionKey=qs("#rebindSessionKey").value.trim();const accountID=qs("#rebindAccountSelect").value;await requestJSON(`/api/accounts/bindings/${encodeURIComponent(sessionKey)}/rebind`,{method:"POST",body:JSON.stringify({account_id:accountID})});showToast("ok",t().texts.rebound,`${sessionKey} -> ${accountID}`);await refreshAll();}catch(err){showToast("err",t().texts.saveFailed,err.message||String(err))}});
+
+      qs("#accountForm").addEventListener("submit",async(event)=>{
+        event.preventDefault();
+        const payload={
+          id:qs("#accountId").value.trim(),
+          email:qs("#accountEmail").value.trim(),
+          cookies:qs("#accountCookies").value.trim(),
+          token:qs("#accountToken").value.trim(),
+          proxy:qs("#accountProxy").value.trim(),
+          enabled:qs("#accountEnabled").checked,
+          weight:Number(qs("#accountWeight").value||1)
+        };
+        try{await requestJSON("/api/accounts",{method:"POST",body:JSON.stringify(payload)});showToast("ok",t().texts.saved,payload.id);await refreshAll();}catch(err){showToast("err",t().texts.saveFailed,err.message||String(err))}
+      });
+
+      qs("#accountList").addEventListener("click",async(event)=>{
+        const target=event.target.closest("button");
+        if(!target) return;
+        const editID=target.dataset.edit;
+        const refreshID=target.dataset.refresh;
+        const toggleID=target.dataset.toggle;
+        const deleteID=target.dataset.delete;
+        const detailsID=target.dataset.details;
+        const cookieHealthID=target.dataset.cookieHealth;
+        try{
+          if(detailsID){
+            openAccountDrawer(detailsID);
+            return;
+          }
+          if(editID){
+            await openEditModal(editID);
+            return;
+          }
+          if(refreshID){
+            await requestJSON(`/api/accounts/${encodeURIComponent(refreshID)}/refresh`,{method:"POST"});
+            showToast("ok",t().texts.refreshSuccess,refreshID);
+            await refreshAll();
+            return;
+          }
+          if(cookieHealthID){
+            await checkCookieHealth(cookieHealthID);
+            return;
+          }
+          if(toggleID){
+            const enabled=target.dataset.enabled==="true";
+            await requestJSON(`/api/accounts/${encodeURIComponent(toggleID)}/${enabled?"disable":"enable"}`,{method:"POST"});
+            showToast("ok",t().texts.actionDone,`${toggleID} ${enabled?"disabled":"enabled"}`);
+            await refreshAll();
+            return;
+          }
+          if(deleteID){
+            if(!confirm(t().texts.deleteConfirm(deleteID))) return;
+            await requestJSON(`/api/accounts/${encodeURIComponent(deleteID)}/delete`,{method:"POST"});
+            showToast("ok",t().texts.deleted,deleteID);
+            await refreshAll();
+          }
+        }catch(err){showToast("err",t().texts.saveFailed,err.message||String(err))}
+      });
+
+      qs("#bindingsList").addEventListener("click",async(event)=>{
+        const target=event.target.closest("button");
+        if(!target || !target.dataset.unbind) return;
+        try{
+          await requestJSON(`/api/accounts/bindings/${encodeURIComponent(target.dataset.unbind)}/unbind`,{method:"POST"});
+          showToast("ok",t().texts.unbindDone,target.dataset.unbind);
+          await refreshAll();
+        }catch(err){showToast("err",t().texts.saveFailed,err.message||String(err))}
+      });
+
+      qs("#incidentList").addEventListener("click",(event)=>{
+        const item=event.target.closest(".incident");
+        if(!item) return;
+        const accountID=item.getAttribute("data-account-id");
+        if(!accountID) return;
+        const card=document.querySelector(`.account[data-account-id="${accountID}"]`);
+        if(card){
+          card.scrollIntoView({behavior:"smooth",block:"center"});
+        }
+        openAccountDrawer(accountID);
+      });
+
+      qs("#closeDrawerBtn").addEventListener("click",closeAccountDrawer);
+      qs("#drawerBackdrop").addEventListener("click",closeAccountDrawer);
+      qs("#closeEditModalBtn").addEventListener("click",closeEditModal);
+      qs("#closeEditModalBtn2").addEventListener("click",closeEditModal);
+      qs("#editModalBackdrop").addEventListener("click",(event)=>{if(event.target===qs("#editModalBackdrop")) closeEditModal();});
+      qs("#saveEditAccountBtn").addEventListener("click",async()=>{try{await saveEditModal()}catch(err){showToast("err",t().texts.saveFailed,err.message||String(err))}});
+      qs("#toggleEditTokenBtn").addEventListener("click",()=>{const input=qs("#editAccountToken");input.type=input.type==="password"?"text":"password";qs("#toggleEditTokenBtn").textContent=input.type==="password"?t().texts.show+" Token":t().texts.hide+" Token"});
+      document.addEventListener("keydown",(event)=>{if(event.key==="Escape"){if(qs("#editModalBackdrop").classList.contains("open")){closeEditModal();return}if(qs("#accountDrawer").classList.contains("open")){closeAccountDrawer();}}});
+      }
+
+      function shouldSkipAutoRefresh(){return document.hidden || qs("#accountDrawer").classList.contains("open") || qs("#accountForm").matches(":focus-within")}
+      function restartAutoRefresh(){if(state.refreshTimer){clearInterval(state.refreshTimer);state.refreshTimer=null}if(state.autoRefreshEnabled){state.refreshTimer=setInterval(()=>{if(shouldSkipAutoRefresh()){setText("#refreshStatusText",t().texts.refreshSkipped);return}renderRefreshControls();refreshAll()},state.refreshInterval)}}
+
+      function init(){
+        syncAccountControlsText();
+        applyLanguage();
+        bindEvents();
+        refreshAll();
+        restartAutoRefresh();
+      }
+
+      init();
     </script>
   </body>
 </html>

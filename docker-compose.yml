@@ -3,7 +3,16 @@ services:
     build: .
     container_name: geminiweb2api
     restart: unless-stopped
+    environment:
+      GEMINIWEB2API_API_KEY: ${GEMINIWEB2API_API_KEY:-your-api-key-here}
+      GEMINIWEB2API_PUBLIC_ACCOUNT_STATUS: ${GEMINIWEB2API_PUBLIC_ACCOUNT_STATUS:-false}
     ports:
       - "8080:8080"
     volumes:
-      - ./config.json:/app/config.json:ro
+      - ./config.json:/app/config.json
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/api/telemetry || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s

@@ -14,12 +14,20 @@ FROM alpine:3.21
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
+RUN apk add --no-cache ca-certificates tzdata wget su-exec && update-ca-certificates \
+    && addgroup -S app && adduser -S -G app app \
+    && mkdir -p /app && chown -R app:app /app
 
 COPY --from=builder /out/geminiweb2api /app/geminiweb2api
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+RUN chown app:app /app/geminiweb2api \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8080
 
 VOLUME ["/app"]
 
-CMD ["/app/geminiweb2api"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 CMD sh -c 'wget -q -O /dev/null http://127.0.0.1:8080/api/telemetry || exit 1'
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
