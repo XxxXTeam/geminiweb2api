@@ -53,6 +53,16 @@ func CurrentGeminiEndpoints(cfg config.Config) GeminiEndpoints {
 }
 
 func New(cfg config.Config, logger *logging.Logger) *http.Client {
+	client, proxyConfigured, proxyValue := NewWithProxy(cfg, strings.TrimSpace(cfg.Proxy), logger)
+	if proxyConfigured {
+		go testProxyConnectivity(client, proxyValue, logger)
+	} else {
+		logger.Info("HTTP 客户端已初始化 (未配置显式代理)")
+	}
+	return client
+}
+
+func NewWithProxy(cfg config.Config, proxyOverride string, logger *logging.Logger) (*http.Client, bool, string) {
 	dialer := &net.Dialer{
 		Timeout:   10 * time.Second,
 		KeepAlive: 30 * time.Second,
@@ -70,28 +80,26 @@ func New(cfg config.Config, logger *logging.Logger) *http.Client {
 	}
 
 	proxyConfigured := false
-	if strings.TrimSpace(cfg.Proxy) != "" {
-		proxyURL, err := url.Parse(strings.TrimSpace(cfg.Proxy))
+	proxyValue := strings.TrimSpace(proxyOverride)
+	if proxyValue == "" {
+		proxyValue = strings.TrimSpace(cfg.Proxy)
+	}
+	if proxyValue != "" {
+		proxyURL, err := url.Parse(proxyValue)
 		if err == nil {
 			transport.Proxy = http.ProxyURL(proxyURL)
 			proxyConfigured = true
 		} else {
-			logger.Warn("无效的代理 URL: %s，将回退到系统环境变量代理，错误: %v", cfg.Proxy, err)
+			logger.Warn("无效的代理 URL: %s，将回退到系统环境变量代理，错误: %v", proxyValue, err)
 		}
 	}
 
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   120 * time.Second,
+		Timeout:   300 * time.Second,
 	}
 
-	if proxyConfigured {
-		go testProxyConnectivity(client, cfg.Proxy, logger)
-	} else {
-		logger.Info("HTTP 客户端已初始化 (未配置显式代理)")
-	}
-
-	return client
+	return client, proxyConfigured, proxyValue
 }
 
 func testProxyConnectivity(client *http.Client, proxyStr string, logger *logging.Logger) {

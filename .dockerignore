@@ -1,0 +1,7 @@
+.git
+.github
+config.json
+*.exe
+main
+main.zip
+test.txt

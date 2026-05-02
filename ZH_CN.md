@@ -49,9 +49,56 @@ curl -s "http://127.0.0.1:8080/v1/models" \
   -H "Authorization: Bearer your-api-key-here"
 ```
 
+### Docker
+
+构建镜像：
+
+```bash
+docker build -t geminiweb2api:latest .
+```
+
+挂载本地 `config.json` 运行容器：
+
+```bash
+docker run -d \
+  --name geminiweb2api \
+  -p 8080:8080 \
+  -v $(pwd)/config.json:/app/config.json \
+  geminiweb2api:latest
+```
+
+Windows PowerShell 示例：
+
+```powershell
+docker run -d `
+  --name geminiweb2api `
+  -p 8080:8080 `
+  -v ${PWD}\config.json:/app/config.json `
+  geminiweb2api:latest
+```
+
+如果容器内需要代理访问外网，可以传入标准代理环境变量：
+
+```bash
+docker run -d \
+  --name geminiweb2api \
+  -p 8080:8080 \
+  -v $(pwd)/config.json:/app/config.json \
+  -e HTTP_PROXY=http://host.docker.internal:7890 \
+  -e HTTPS_PROXY=http://host.docker.internal:7890 \
+  geminiweb2api:latest
+```
+
+Docker Compose：
+
+```bash
+cp config.json.example config.json
+docker compose up -d --build
+```
+
 ### 配置文件
 
-项目根目录使用 `config.json`：
+项目根目录使用 `config.json`，可以先从 `config.json.example` 复制：
 
 ```json
 {
