@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.6.0](https://github.com/XxxXTeam/geminiweb2api/compare/v0.5.0...v0.6.0) (2026-05-02)
+
+
+### ✨ 新功能
+
+* add a stable pro deep think alias ([3769576](https://github.com/XxxXTeam/geminiweb2api/commit/376957640bd1644bb7cd749228efae000c524e79))
+* add Docker packaging support ([6c23ffa](https://github.com/XxxXTeam/geminiweb2api/commit/6c23ffa17685cbeab032e617a347b626457cc935))
+* add Docker packaging support ([0fc5d84](https://github.com/XxxXTeam/geminiweb2api/commit/0fc5d8498d54d30fea9bbb70adab23c197c6c99a))
+* add multimodal message parsing ([8a6b3fd](https://github.com/XxxXTeam/geminiweb2api/commit/8a6b3fd05543ba7e03cf849d90cf7ba3e7749991))
+* add multimodal prompt handling ([9345693](https://github.com/XxxXTeam/geminiweb2api/commit/93456935c07ec516875c02e109d591c6874d4a9a))
+* capture larger Gemini payloads ([a14e230](https://github.com/XxxXTeam/geminiweb2api/commit/a14e2309f42d6130d069210dd9b1e070ca72301f))
+* harden dashboard and expand account runtime support ([f1f7190](https://github.com/XxxXTeam/geminiweb2api/commit/f1f7190b04f64e9498728e6441b3b7072b666125))
+* improve NewAPI compatibility and health endpoints ([c8c25d0](https://github.com/XxxXTeam/geminiweb2api/commit/c8c25d074a948a7219588b030091588673326373))
+* parse batchexecute media payloads ([0a4bb94](https://github.com/XxxXTeam/geminiweb2api/commit/0a4bb949a8ca1d1dc91bcbf5ad9e978c93e8c95d))
+* pass multimodal images through server ([f45b493](https://github.com/XxxXTeam/geminiweb2api/commit/f45b4933adfc271948755ea104862dd8fdf48272))
+* 一次性并入部署增强、核心链路稳定化与多模态能力（请求协作收口媒体输出） ([2aad33c](https://github.com/XxxXTeam/geminiweb2api/commit/2aad33cda027fa15b2bb19a6dc87d93ac5cf7e56))
+
+
+### 🐛 错误修复
+
+* stabilize Gemini cookie account handling ([33c0848](https://github.com/XxxXTeam/geminiweb2api/commit/33c0848e01b6f719f4ef9e5ddbde35495ef3b85a))
+
+
+### 🔧 其他更新
+
+* format Go sources for CI ([112c251](https://github.com/XxxXTeam/geminiweb2api/commit/112c25175d46b3217c722679d05b3d482d54a233))
+* harden Docker runtime and health checks ([409e753](https://github.com/XxxXTeam/geminiweb2api/commit/409e753ea235959e1225a87ad6ae8f5c1fef0f47))
+
+
+### 🎡 持续集成
+
+* add Docker workflow and update Go version ([e9cc088](https://github.com/XxxXTeam/geminiweb2api/commit/e9cc08806e1c8f74edc33ec1a0c0d0c94a0e9780))
+
 ## [0.5.0](https://github.com/XxxXTeam/geminiweb2api/compare/v0.4.0...v0.5.0) (2026-04-11)
 
 
